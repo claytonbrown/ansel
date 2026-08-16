@@ -1,0 +1,120 @@
+import dayjs from 'dayjs'
+import duration from 'dayjs/plugin/duration'
+import localizedFormat from 'dayjs/plugin/localizedFormat'
+import relativeTime from 'dayjs/plugin/relativeTime'
+
+import 'dayjs/locale/cs'
+import 'dayjs/locale/de'
+import 'dayjs/locale/en'
+import 'dayjs/locale/es'
+import 'dayjs/locale/fr'
+import 'dayjs/locale/ru'
+import 'dayjs/locale/zh'
+
+import text_cs from './text_cs'
+import text_de from './text_de'
+import text_en from './text_en'
+import text_es from './text_es'
+import text_fr from './text_fr'
+import text_ru from './text_ru'
+import text_zh from './text_zh'
+
+dayjs.extend(duration)
+dayjs.extend(localizedFormat)
+dayjs.extend(relativeTime)
+
+
+// Keep in sync with src/script/check-i18n.mjs
+export type Locale = 'cs' | 'de' | 'en' | 'es' | 'fr' | 'ru' | 'zh'
+export const locales = [ 'cs', 'de', 'en', 'es', 'fr', 'ru', 'zh' ]
+
+export const fallbackLocale: Locale = 'en'
+export type I18nKey = keyof typeof text_en
+
+const textsByLang: { [K in Locale]: { [K in I18nKey]?: string } } = {
+    cs: text_cs,
+    de: text_de,
+    en: text_en,
+    es: text_es,
+    fr: text_fr,
+    ru: text_ru,
+    zh: text_zh,
+}
+
+const msgFormatRe = /\{(\d+)\}/g
+const msgSplitRe = /(\{\d+\})/g
+
+
+let locale: Locale
+
+export function setLocale(rawLocale: string) {
+    locale = sanitizeLocale(rawLocale)
+    dayjs.locale(locale)
+}
+
+function sanitizeLocale(rawLocale: string): Locale {
+    if (rawLocale.length > 2) {
+        rawLocale = rawLocale.substring(0, 2)
+    }
+    if (locales.indexOf(rawLocale) === -1) {
+        rawLocale = fallbackLocale
+    }
+    return rawLocale as Locale
+}
+
+export function getLocale(): string {
+    return locale
+}
+
+export function msg(key: I18nKey, ...args: any[]): string {
+    if (!locale) {
+        throw new Error('msg was called before locale was set')
+    }
+
+    let text: string | undefined = textsByLang[locale][key]
+    if (!text) {
+        console.error(`Missing I18N key for ${locale}: ${key}`)
+        text = textsByLang[fallbackLocale][key]
+        if (!text) {
+            return `[${key}]`
+        }
+    }
+
+    if (args && args.length > 0) {
+        return text.replace(msgFormatRe, (match, group1) => args[parseInt(group1)])
+    } else {
+        return text
+    }
+}
+
+export function hasMsg(key: string): key is I18nKey {
+    if (!locale) {
+        throw new Error('msg was called before locale was set')
+    }
+    return !!textsByLang[locale][key]
+}
+
+export function splitMsg(key: I18nKey): string[] {
+    return msg(key).split(msgSplitRe)
+}
+
+/**
+ * Returns the full texts map for the given locale, falling back to English
+ * for any missing keys. Called by the Rust backend via the foreground RPC
+ * so it can use the same translations for native UI elements (e.g. the menu).
+ *
+ * The return type is a plain string-to-string map so it serialises cleanly
+ * to JSON without TypeScript-specific type information.
+ */
+export function getLocaleTexts(): Record<string, string> {
+    if (!locale) {
+        throw new Error('msg was called before locale was set')
+    }
+
+    let result: Record<string, string> = textsByLang[locale]
+    if (locale !== fallbackLocale) {
+        // Merge: start with English (all keys present), then overlay the target locale
+        result = { ...textsByLang[fallbackLocale], ...result }
+    }
+    return result
+}

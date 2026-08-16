@@ -1,6 +1,4 @@
-import { isLoadedPhotoSection, LoadedPhotoSection, PhotoId, PhotoSectionId } from 'common/CommonTypes'
-import { assertRendererProcess } from 'common/util/ElectronUtil'
-
+import { isLoadedPhotoSection, LoadedPhotoSection, PhotoId, PhotoSectionId } from 'app/CommonTypes'
 import { setLibraryActivePhotoAction, setLibraryHoverPhotoAction, setLibrarySelectionAction } from 'app/state/actions'
 import { getPreselectionRange } from 'app/state/selectors'
 import { PhotoLibraryPosition, SectionSelectionState, SelectionState } from 'app/state/StateTypes'
@@ -8,9 +6,6 @@ import store from 'app/state/store'
 import { GridSectionLayout } from 'app/UITypes'
 
 import { getPrevGridLayout } from './LibraryController'
-
-
-assertRendererProcess()
 
 
 /**
@@ -22,12 +17,12 @@ assertRendererProcess()
 let prevUpDownActivePhotoCenterX: number | null
 
 
-export type MoveDirection = 'left' | 'right' | 'up' | 'down'
+export type MoveDirection = 'left' | 'right' | 'up' | 'down'
 
 
 export interface LibrarySelectionController {
-    setActivePhoto(activePhoto: PhotoLibraryPosition | null): void
-    setHoverPhoto(activePhoto: PhotoLibraryPosition | null): void
+    setActivePhoto(activePhoto: PhotoLibraryPosition | null): void
+    setHoverPhoto(activePhoto: PhotoLibraryPosition | null): void
     moveActivePhoto(direction: MoveDirection): void
     setSectionSelected(sectionId: PhotoSectionId, selected: boolean): void
     setPhotoSelected(sectionId: PhotoSectionId, photoId: PhotoId, selected: boolean): void
@@ -38,12 +33,12 @@ export interface LibrarySelectionController {
 
 export const defaultLibrarySelectionController: LibrarySelectionController = {
 
-    setActivePhoto(activePhoto: PhotoLibraryPosition | null): void {
+    setActivePhoto(activePhoto: PhotoLibraryPosition | null): void {
         prevUpDownActivePhotoCenterX = null
         store.dispatch(setLibraryActivePhotoAction(activePhoto))
     },
 
-    setHoverPhoto(hoverPhoto: PhotoLibraryPosition | null): void {
+    setHoverPhoto(hoverPhoto: PhotoLibraryPosition | null): void {
         store.dispatch(setLibraryHoverPhotoAction(hoverPhoto))
     },
 
@@ -252,7 +247,7 @@ export const defaultLibrarySelectionController: LibrarySelectionController = {
                 const endPhotoIndex   = (sectionIndex === endSectionIndex) ? preselectionRange.endPhotoIndex : (section.count - 1)
 
                 let selectedCount = 0
-                let selectedPhotosById: 'all' | { [K in PhotoId]?: true } = {}
+                let selectedPhotosById: 'all' | { [K in PhotoId]?: true } = {}
                 for (let photoIndex = 0; photoIndex < section.photoIds.length; photoIndex++) {
                     const photoId = section.photoIds[photoIndex]
                     if ((photoIndex >= startPhotoIndex && photoIndex <= endPhotoIndex) ?

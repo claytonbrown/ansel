@@ -1,7 +1,6 @@
 import { action, createAsyncAction } from 'typesafe-actions'
 
-import { PhotoId, Photo, Tag, Device, PhotoDetail, PhotoWork, PhotoSection, PhotoSectionId, PhotoSet, PhotoFilter, Settings, UiConfig, PhotoExportOptions, PhotoExportProgress, ExifData, MetaData } from 'common/CommonTypes'
-import { ImportProgress } from 'common/CommonTypes'
+import { ImportProgress, PhotoId, Photo, Tag, PhotoDetail, PhotoWork, PhotoSection, PhotoSectionId, PhotoSet, PhotoFilter, Settings, UiConfig, PhotoExportOptions, PhotoExportProgress, ExifData, MetaData } from 'app/CommonTypes'
 
 import {
     INIT, SET_DEVICE_PIXEL_RATIO, SET_WEB_GL_SUPPORT, SET_FULL_SCREEN, SET_SHIFT_PRESSED,
@@ -10,12 +9,12 @@ import {
     CLOSE_DETAIL, SET_LIBRARY_ACTIVE_PHOTO, SET_LIBRARY_HOVER_PHOTO, SET_LIBRARY_SELECTION, FETCH_TOTAL_PHOTO_COUNT,
     FETCH_SECTIONS_REQUEST, FETCH_SECTIONS_SUCCESS, FETCH_SECTIONS_FAILURE,
     FETCH_SECTION_PHOTOS, FORGET_SECTION_PHOTOS,
-    CHANGE_PHOTOWORK, CHANGE_PHOTOS, EMPTY_TRASH, SET_SHOW_INFO, SET_INFO_PHOTO_DATA, SET_INFO_PHOTO_DATA_FAILURE,
+    CHANGE_PHOTOWORK, CHANGE_PHOTOS, EMPTY_TRASH, SET_SHOW_INFO, SET_INFO_PHOTO_DATA,
     SET_IMPORT_PROGRESS, FETCH_TAGS, SET_PHOTO_TAGS,
-    INIT_DEVICES, ADD_DEVICE, REMOVE_DEVICE, OPEN_EXPORT, CLOSE_EXPORT, SET_EXPORT_OPTIONS,
+    OPEN_EXPORT, CLOSE_EXPORT, SET_EXPORT_OPTIONS,
     TOGGLE_SHOW_EXPORT_REMOVE_INFO_DESC, SET_EXPORT_PROGRESS
 } from './actionTypes'
-import { PhotoCollection, PhotoLibraryPosition, SelectionState } from './StateTypes'
+import { InfoPhotoDataWithoutSection, PhotoCollection, PhotoLibraryPosition, SelectionState } from './StateTypes'
 
 
 export const initAction = (uiConfig: UiConfig, settings: Settings) => action(INIT, { uiConfig, settings })
@@ -33,8 +32,8 @@ export const setDetailPhotoAction = (sectionId: PhotoSectionId, photoIndex: numb
 export const fetchDetailPhotoDataAction = createAsyncAction(FETCH_DETAIL_PHOTO_DATA_REQUEST, FETCH_DETAIL_PHOTO_DATA_SUCCESS, FETCH_DETAIL_PHOTO_DATA_FAILURE)<{ photoId: PhotoId }, { photoId: PhotoId, photoWork: PhotoWork }, { photoId: PhotoId, error: Error }>()
 export const closeDetailAction = () => action(CLOSE_DETAIL)
 
-export const setLibraryActivePhotoAction = (activePhoto: PhotoLibraryPosition | null) => action(SET_LIBRARY_ACTIVE_PHOTO, activePhoto)
-export const setLibraryHoverPhotoAction = (hoverPhoto: PhotoLibraryPosition | null) => action(SET_LIBRARY_HOVER_PHOTO, hoverPhoto)
+export const setLibraryActivePhotoAction = (activePhoto: PhotoLibraryPosition | null) => action(SET_LIBRARY_ACTIVE_PHOTO, activePhoto)
+export const setLibraryHoverPhotoAction = (hoverPhoto: PhotoLibraryPosition | null) => action(SET_LIBRARY_HOVER_PHOTO, hoverPhoto)
 export const setLibrarySelectionAction = (selection: SelectionState | null, activePhoto?: PhotoLibraryPosition) => action(SET_LIBRARY_SELECTION, { selection, activePhoto })
 
 export const fetchTotalPhotoCountAction = (totalPhotoCount: number) => action(FETCH_TOTAL_PHOTO_COUNT, { totalPhotoCount })
@@ -46,17 +45,12 @@ export const changePhotosAction = (photos: Photo[], update: Partial<Photo>) => a
 export const emptyTrashAction = (trashedPhotoIds: PhotoId[]) => action(EMPTY_TRASH, { trashedPhotoIds })
 
 export const setShowInfoAction = (view: 'library' | 'detail', showInfo: boolean) => action(SET_SHOW_INFO, { view, showInfo })
-export const setInfoPhotoDataAction = (payload: { photoId: PhotoId, photoDetail: PhotoDetail, masterFileSize: number, metaData: MetaData, exifData: ExifData | null }) => action(SET_INFO_PHOTO_DATA, payload)
-export const setInfoPhotoDataFailureAction = (photoId: PhotoId) => action(SET_INFO_PHOTO_DATA_FAILURE, { photoId })
+export const setInfoPhotoDataAction = (payload: InfoPhotoDataWithoutSection) => action(SET_INFO_PHOTO_DATA, payload)
 
-export const setImportProgressAction = (progress: ImportProgress | null) => action(SET_IMPORT_PROGRESS, progress)
+export const setImportProgressAction = (progress: ImportProgress | null) => action(SET_IMPORT_PROGRESS, progress)
 
 export const fetchTagsAction = (tags: Tag[]) => action(FETCH_TAGS, tags)
 export const setPhotoTagsAction = (photoId: PhotoId, tags: string[]) => action(SET_PHOTO_TAGS, { photoId, tags })
-
-export const initDevicesAction = (devices: Device[]) => action(INIT_DEVICES, { devices })
-export const addDeviceAction = (device: Device) => action(ADD_DEVICE, { device })
-export const removeDeviceAction = (device: Device) => action(REMOVE_DEVICE, { device })
 
 export const openExportAction = (photos: PhotoCollection) => action(OPEN_EXPORT, { photos })
 export const closeExportAction = () => action(CLOSE_EXPORT)

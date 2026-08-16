@@ -1,7 +1,6 @@
-import { bindMany, isShallowEqual } from 'common/util/LangUtil'
-
 import store from 'app/state/store'
 import { AppState } from 'app/state/StateTypes'
+import { bindMany, isShallowEqual } from 'app/util/LangUtil'
 
 import { observeStore } from './ReduxUtil'
 
@@ -46,7 +45,7 @@ export default class SerialUpdater<UpdateParameters> {
             return
         } else {
             const options = this.options
-            const updateDelay = options.updateDelay || 0
+            const updateDelay = options.updateDelay || 0
             if (updateDelay) {
                 if (this.updateDelayTimeoutId) {
                     clearTimeout(this.updateDelayTimeoutId)
@@ -82,7 +81,7 @@ export default class SerialUpdater<UpdateParameters> {
             if (pendingUpdateParameters) {
                 if (isShallowEqual(params, pendingUpdateParameters)) {
                     this.pendingUpdateParameters = null
-                } else {
+                } else {
                     this.update()
                 }
             }

@@ -2,7 +2,7 @@ import React, { ReactNode } from 'react'
 import { Button } from '@blueprintjs/core'
 import classnames from 'classnames'
 
-import { bindMany } from 'common/util/LangUtil'
+import { bindMany } from 'app/util/LangUtil'
 
 import './List.less'
 
@@ -26,7 +26,7 @@ export default class List<ItemType> extends React.Component<Props<ItemType>> {
         const { props } = this
 
         let elem: HTMLElement | null = event.target as HTMLElement
-        let itemIndex: number | null = null
+        let itemIndex: number | null = null
         while (elem) {
             if (elem.dataset.itemIndex != null) {
                 itemIndex = parseInt(elem.dataset.itemIndex)

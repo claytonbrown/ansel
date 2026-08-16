@@ -3,10 +3,7 @@ import React from 'react'
 import { findDOMNode } from 'react-dom'
 import { ResizeSensor, IResizeEntry } from '@blueprintjs/core'
 
-import { PhotoId, Photo, PhotoSectionId, PhotoSectionById, isLoadedPhotoSection } from 'common/CommonTypes'
-import CancelablePromise from 'common/util/CancelablePromise'
-import { bindMany } from 'common/util/LangUtil'
-
+import { PhotoId, Photo, PhotoSectionId, PhotoSectionById, isLoadedPhotoSection } from 'app/CommonTypes'
 import { showError } from 'app/ErrorPresenter'
 import { GridSectionLayout, GridLayout, JustifiedLayoutBox } from 'app/UITypes'
 import { CommandGroupId, addCommandGroup, setCommandGroupEnabled, removeCommandGroup } from 'app/controller/HotkeyController'
@@ -16,6 +13,8 @@ import { isPhotoSelected } from 'app/state/selectors'
 import { PhotoLibraryPosition, PreselectionRange, SectionPreselection, SelectionState } from 'app/state/StateTypes'
 import { gridScrollBarWidth, toolbarHeight } from 'app/style/variables'
 import { getScrollbarSize } from 'app/util/DomUtil'
+import CancelablePromise from 'app/util/CancelablePromise'
+import { bindMany } from 'app/util/LangUtil'
 
 import GridScrollBar from './GridScrollBar'
 import GridSection, { sectionHeadHeight } from './GridSection'
@@ -33,8 +32,8 @@ interface Props {
     isActive: boolean
     sectionIds: PhotoSectionId[]
     sectionById: PhotoSectionById
-    activePhoto: PhotoLibraryPosition | null
-    selection: SelectionState | null
+    activePhoto: PhotoLibraryPosition | null
+    selection: SelectionState | null
     preselectionRange: PreselectionRange | null
     gridRowHeight: number
     librarySelectionController: LibrarySelectionController
@@ -54,9 +53,9 @@ export default class Grid extends React.Component<Props, State> {
 
     private commandGroupId: CommandGroupId
 
-    private gridLayout: GridLayout | null = null
+    private gridLayout: GridLayout | null = null
     private nailedGridPosition: NailedGridPosition | null = null
-    private releaseNailTimer: NodeJS.Timer | null = null
+    private releaseNailTimer: NodeJS.Timer | null = null
 
 
     constructor(props: Props) {
@@ -88,7 +87,7 @@ export default class Grid extends React.Component<Props, State> {
             setCommandGroupEnabled(this.commandGroupId, nextProps.isActive)
         }
 
-        if (nextProps.gridRowHeight !== prevProps.gridRowHeight || nextState.viewportWidth !== prevState.viewportWidth ||
+        if (nextProps.gridRowHeight !== prevProps.gridRowHeight || nextState.viewportWidth !== prevState.viewportWidth ||
             nextProps.sectionIds !== prevProps.sectionIds)
         {
             // Sizes have changed (e.g. window resize, open/close info, change of gridRowHeight)
@@ -111,9 +110,9 @@ export default class Grid extends React.Component<Props, State> {
 
         return this.gridLayout !== prevGridLayout
             || nextProps.activePhoto !== prevProps.activePhoto
-            || nextProps.selection !== prevProps.selection
-            || nextProps.preselectionRange !== prevProps.preselectionRange
-            || nextState.scrollTop !== prevState.scrollTop
+            || nextProps.selection !== prevProps.selection
+            || nextProps.preselectionRange !== prevProps.preselectionRange
+            || nextState.scrollTop !== prevState.scrollTop
     }
 
     componentDidUpdate(prevProps: Props, prevState: State) {
@@ -290,7 +289,7 @@ export default class Grid extends React.Component<Props, State> {
 
 
 function getNailedGridPosition(scrollTop: number, viewportHeight: number, sectionLayouts: GridSectionLayout[],
-    sectionIds: PhotoSectionId[], sectionById: PhotoSectionById): NailedGridPosition | null
+    sectionIds: PhotoSectionId[], sectionById: PhotoSectionById): NailedGridPosition | null
 {
     const positions: PhotoGridPosition[] = []
 
@@ -350,7 +349,7 @@ function getSectionPreselection(sectionIndex: number, preselectionRange: Presele
 
 
 function getPhotoGridPosition(y: number, sectionBodyTop: number, box: JustifiedLayoutBox, sectionId: PhotoSectionId,
-    photoId: PhotoId, positionToUpdate?: Partial<PhotoGridPosition> | null): PhotoGridPosition
+    photoId: PhotoId, positionToUpdate?: Partial<PhotoGridPosition> | null): PhotoGridPosition
 {
     if (!positionToUpdate) {
         positionToUpdate = {}
@@ -377,7 +376,7 @@ function getPhotoGridPosition(y: number, sectionBodyTop: number, box: JustifiedL
 
 
 function getScrollTopForNailedGridPosition(nailedGridPosition: NailedGridPosition, viewportHeight: number,
-    sectionLayouts: GridSectionLayout[], sectionIds: PhotoSectionId[], sectionById: PhotoSectionById): number | null
+    sectionLayouts: GridSectionLayout[], sectionIds: PhotoSectionId[], sectionById: PhotoSectionById): number | null
 {
     let totalCenterY = 0
     let centerYCount = 0
@@ -399,7 +398,7 @@ function getScrollTopForNailedGridPosition(nailedGridPosition: NailedGridPositio
 
 
 function getYForPhotoGridPosition(position: PhotoGridPosition, sectionLayouts: GridSectionLayout[],
-    sectionIds: PhotoSectionId[], sectionById: PhotoSectionById): number | null
+    sectionIds: PhotoSectionId[], sectionById: PhotoSectionById): number | null
 {
     const sectionIndex = sectionIds.indexOf(position.sectionId)
     if (sectionIndex === -1) {

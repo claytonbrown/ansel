@@ -3,16 +3,15 @@ import { connect } from 'react-redux'
 import classnames from 'classnames'
 import { Dialog, Classes, Button, Label, HTMLSelect, Collapse, Card, Checkbox, Spinner } from '@blueprintjs/core'
 
-import { photoRenderFormats, PhotoExportOptions, PhotoExportCustomSizeSide, PhotoExportSizeType, PhotoExportFileNameStyle, PhotoExportProgress } from 'common/CommonTypes'
-import { msg, splitMsg } from 'common/i18n/i18n'
-import { bindMany } from 'common/util/LangUtil'
-import { formatNumber } from 'common/util/TextUtil'
-
+import { photoRenderFormats, PhotoExportOptions, PhotoExportCustomSizeSide, PhotoExportSizeType, PhotoExportFileNameStyle, PhotoExportProgress } from 'app/CommonTypes'
+import { msg, splitMsg } from 'app/i18n/i18n'
 import { CustomSizeSideWidth, CustomSizeSideHeight, CustomSizeSideSize, customSizeSideIconSize } from 'app/ui/widget/icon/export'
 import { SvgIconFactory } from 'app/ui/widget/icon/SvgIcon'
 import { setExportOptionsAction, toggleShowExportRemoveInfoDescAction } from 'app/state/actions'
 import { AppState, PhotoCollection } from 'app/state/StateTypes'
+import { bindMany } from 'app/util/LangUtil'
 import { getCollectionSize } from 'app/util/PhotoCollectionResolver'
+import { formatNumber } from 'app/util/TextUtil'
 
 import ExportDialogController from './ExportDialogController'
 
@@ -34,7 +33,7 @@ interface StateProps {
     photos: PhotoCollection
     exportOptions: PhotoExportOptions
     showRemoveInfoDesc: boolean
-    progress: PhotoExportProgress | null
+    progress: PhotoExportProgress | null
 }
 
 interface DispatchProps {
@@ -297,7 +296,7 @@ export class ExportDialog extends React.Component<Props, State> {
                     <div className='ExportDialog-progressFolder'>
                         {msg('ExportDialog_exportingTo', props.exportOptions.folderPath)}
                     </div>
-                    <Spinner size={120} value={spinnerProgress} />
+                    <Spinner size={120} value={spinnerProgress} />
                     <div className='ExportDialog-progressPercent'>
                         {`${Math.round(spinnerProgress * 100)}%`}
                     </div>

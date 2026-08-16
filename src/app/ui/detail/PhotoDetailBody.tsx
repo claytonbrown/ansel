@@ -1,20 +1,20 @@
 import React from 'react'
 import classnames from 'classnames'
-import { ResizeSensor, IResizeEntry, Spinner, NonIdealState, Classes, Button } from '@blueprintjs/core'
+import { ResizeSensor, IResizeEntry, Spinner, NonIdealState, Classes, Button, Intent } from '@blueprintjs/core'
 import { FaRegCircle } from 'react-icons/fa'
 
-import { PhotoWork, PhotoSectionId, Photo } from 'common/CommonTypes'
-import { msg } from 'common/i18n/i18n'
-import { CameraMetrics, CameraMetricsBuilder, RequestedPhotoPosition, PhotoPosition } from 'common/util/CameraMetrics'
-import { Size, zeroSize, Insets, zeroInsets, Rect } from 'common/util/GeometryTypes'
-import { bindMany, isShallowEqual } from 'common/util/LangUtil'
-
+import { PhotoWork, PhotoSectionId, Photo } from 'app/CommonTypes'
+import { msg } from 'app/i18n/i18n'
+import { addCommandGroup, Command, CommandGroupId, getCommandButtonProps, removeCommandGroup, setCommandGroupEnabled } from 'app/controller/HotkeyController'
 import { LibrarySelectionController } from 'app/controller/LibrarySelectionController'
 import { PhotoActionController } from 'app/controller/PhotoActionController'
 import { isPhotoSelected } from 'app/state/selectors'
 import { SelectionState } from 'app/state/StateTypes'
 import RedCheckCircle from 'app/ui/widget/icon/RedCheckCircle'
 import PhotoActionButtons from 'app/ui/widget/PhotoActionButtons'
+import { CameraMetrics, CameraMetricsBuilder, RequestedPhotoPosition, PhotoPosition } from 'app/util/CameraMetrics'
+import { Size, zeroSize, Insets, zeroInsets, Rect } from 'app/util/GeometryTypes'
+import { bindMany, isShallowEqual } from 'app/util/LangUtil'
 
 import CropModeLayer from './CropModeLayer'
 import { DetailMode } from './DetailTypes'
@@ -42,9 +42,9 @@ export interface Props {
     isFirst: boolean
     isLast: boolean
     imagePath: string
-    imagePathPrev: string | null
-    imagePathNext: string | null
-    photoWork: PhotoWork | null
+    imagePathPrev: string | null
+    imagePathNext: string | null
+    photoWork: PhotoWork | null
     photoActionController: PhotoActionController
     librarySelectionController: LibrarySelectionController
     setMode(mode: DetailMode): void
@@ -55,9 +55,9 @@ export interface Props {
 }
 
 interface State {
-    prevMode: DetailMode | null
+    prevMode: DetailMode | null
     prevImagePath: string | null
-    prevPhotoWork: PhotoWork | null
+    prevPhotoWork: PhotoWork | null
     loadingState: PhotoLayerLoadingState | null
     /** The size of the detail body (in px) */
     bodySize: Size
@@ -65,32 +65,14 @@ interface State {
     boundsRect: Rect | null
     photoPosition: RequestedPhotoPosition
     /** The PhotoWork which is changed in crop mode but not yet saved */
-    editedPhotoWork: PhotoWork | null
+    editedPhotoWork: PhotoWork | null
     cameraMetricsBuilder: CameraMetricsBuilder
     cameraMetrics: CameraMetrics | null
 }
 
-export default class PhotoDetailBody extends React.Component<Props, State> {
+type CommandKeys = 'toggleSelected'
 
-    constructor(props: Props) {
-        super(props)
-        bindMany(this, 'onLoadingStateChange', 'onResize', 'onTextureChange', 'onTogglePhotoSelected', 
-            'setPhotoPosition', 'enterCropMode', 'onPhotoWorkEdited', 'onCropDone')
-        const cameraMetricsBuilder = new CameraMetricsBuilder()
-        this.state = {
-            prevMode: null,
-            prevImagePath: null,
-            prevPhotoWork: null,
-            loadingState: null,
-            bodySize: zeroSize,
-            textureSize: null,
-            boundsRect: null,
-            photoPosition: 'contain',
-            editedPhotoWork: null,
-            cameraMetricsBuilder,
-            cameraMetrics: null,
-        }
-    }
+export default class PhotoDetailBody extends React.Component<Props, State> {
 
     static getDerivedStateFromProps(nextProps: Props, prevState: State): Partial<State> | null {
         const { cameraMetricsBuilder } = prevState
@@ -144,6 +126,48 @@ export default class PhotoDetailBody extends React.Component<Props, State> {
         return nextState
     }
 
+    private commands: { [K in CommandKeys]: Command }
+    private commandGroupId: CommandGroupId = -1
+
+    constructor(props: Props) {
+        super(props)
+        bindMany(this, 'onLoadingStateChange', 'onResize', 'onTextureChange', 'onTogglePhotoSelected', 
+            'setPhotoPosition', 'enterCropMode', 'onPhotoWorkEdited', 'onCropDone')
+        const cameraMetricsBuilder = new CameraMetricsBuilder()
+        this.state = {
+            prevMode: null,
+            prevImagePath: null,
+            prevPhotoWork: null,
+            loadingState: null,
+            bodySize: zeroSize,
+            textureSize: null,
+            boundsRect: null,
+            photoPosition: 'contain',
+            editedPhotoWork: null,
+            cameraMetricsBuilder,
+            cameraMetrics: null,
+        }
+
+        this.commands = {
+            toggleSelected: { combo: 'space', enabled: () => this.props.mode === 'view', label: msg('PhotoDetailBody_select'), onAction: this.onTogglePhotoSelected },
+        }
+    }
+
+    componentDidMount() {
+        this.commandGroupId = addCommandGroup(this.commands)
+    }
+
+    componentDidUpdate(prevProps: Props) {
+        const { props } = this
+        if (props.isActive !== prevProps.isActive) {
+            setCommandGroupEnabled(this.commandGroupId, props.isActive)
+        }
+    }
+
+    componentWillUnmount() {
+        removeCommandGroup(this.commandGroupId)
+    }
+
     private onLoadingStateChange(loadingState: PhotoLayerLoadingState) {
         this.setState({ loadingState })
     }
@@ -179,7 +203,7 @@ export default class PhotoDetailBody extends React.Component<Props, State> {
     }
 
     private onPhotoWorkEdited(photoWork: PhotoWork, boundsRect?: Rect | null) {
-        this.setState({ editedPhotoWork: photoWork, boundsRect: boundsRect || null })
+        this.setState({ editedPhotoWork: photoWork, boundsRect: boundsRect || null })
     }
 
     private onCropDone() {
@@ -201,7 +225,7 @@ export default class PhotoDetailBody extends React.Component<Props, State> {
     }
 
     render() {
-        const { props, state } = this
+        const { props, state, commands } = this
         const isSelected = isPhotoSelected(props.sectionId, props.photo.id, props.selection)
         return (
             <div className={classnames(props.className, 'PhotoDetailBody')}>
@@ -223,29 +247,27 @@ export default class PhotoDetailBody extends React.Component<Props, State> {
                     <ViewModeLayer
                         topBarClassName={props.topBarClassName}
                         bodyClassName={props.bodyClassName}
-                        inSelectionMode={!!props.selection}
                         isTopBarRight={!props.isShowingInfo}
                         topBarRightItem={
-                            props.selection ? (
-                                <Button
-                                    className='PhotoDetailBody-toggleSelected'
-                                    intent='primary'
-                                    active={isSelected}
-                                    icon={isSelected ? <RedCheckCircle size={16}/> : <FaRegCircle style={{ fontSize: 16 }}/>}
-                                    text={msg(isSelected ? 'PhotoDetailBody_selected' : 'PhotoDetailBody_select')}
-                                    onClick={this.onTogglePhotoSelected}
-                                />
-                            ) : (
+                            <>
                                 <PhotoActionButtons
+                                    isActive={props.isActive}
                                     selectedPhotos={props.photo}
                                     isShowingTrash={!!props.photo.trashed}
                                     isShowingInfo={props.isShowingInfo}
                                     photoActionController={props.photoActionController}
                                     toggleShowInfo={props.toggleShowInfo}
                                 />
-                            )
+                                <Button
+                                    className='PhotoDetailBody-toggleSelected'
+                                    intent={props.selection ? Intent.PRIMARY : Intent.NONE}
+                                    active={isSelected}
+                                    icon={isSelected ? <RedCheckCircle size={16}/> : <FaRegCircle style={{ fontSize: 16 }}/>}
+                                    text={msg(isSelected ? 'PhotoDetailBody_selected' : 'PhotoDetailBody_select')}
+                                    {...getCommandButtonProps(commands.toggleSelected)}
+                                />
+                            </>
                         }
-                        showEditButton={!props.selection}
                         isActive={props.isActive}
                         isFirst={props.isFirst}
                         isLast={props.isLast}
@@ -253,7 +275,6 @@ export default class PhotoDetailBody extends React.Component<Props, State> {
                         setPreviousDetailPhoto={props.setPreviousDetailPhoto}
                         setNextDetailPhoto={props.setNextDetailPhoto}
                         setPhotoPosition={this.setPhotoPosition}
-                        togglePhotoSelected={this.onTogglePhotoSelected}
                         enterCropMode={this.enterCropMode}
                         closeDetail={props.closeDetail}
                     />
@@ -262,6 +283,7 @@ export default class PhotoDetailBody extends React.Component<Props, State> {
                     <CropModeLayer
                         topBarClassName={props.topBarClassName}
                         bodyClassName={props.bodyClassName}
+                        isActive={props.isActive}
                         photoWork={state.editedPhotoWork || props.photoWork}
                         cameraMetrics={state.cameraMetrics}
                         onPhotoWorkEdited={this.onPhotoWorkEdited}

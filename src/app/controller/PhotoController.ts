@@ -1,17 +1,14 @@
-import { PhotoWork, PhotoSectionId, Photo, PhotoFilter, PhotoId } from 'common/CommonTypes'
-import { getMasterPath, getThumbnailUrl } from 'common/util/DataUtil'
-import { rotate } from 'common/util/EffectsUtil'
-import { assertRendererProcess } from 'common/util/ElectronUtil'
-
 import BackgroundClient from 'app/BackgroundClient'
+import { PhotoWork, PhotoSectionId, Photo, PhotoFilter, PhotoId, EmptyTrashResult } from 'app/CommonTypes'
 import { showError } from 'app/ErrorPresenter'
 import store from 'app/state/store'
-import { fetchTotalPhotoCountAction, fetchSectionsAction, changePhotoWorkAction, changePhotosAction } from 'app/state/actions'
-import { PhotoCollection, SelectionState } from 'app/state/StateTypes'
+import { fetchTotalPhotoCountAction, fetchSectionsAction, changePhotoWorkAction, changePhotosAction, emptyTrashAction } from 'app/state/actions'
+import { PhotoCollection } from 'app/state/StateTypes'
+import { getMasterPath, getThumbnailUrl } from 'app/util/DataUtil'
+import { rotate } from 'app/util/EffectsUtil'
 import { getPhotosOfCollection } from 'app/util/PhotoCollectionResolver'
 
-
-assertRendererProcess()
+import { setTags } from './PhotoTagController'
 
 
 let thumbnailVersion = Date.now()
@@ -48,6 +45,14 @@ function internalFetchSections(newFilter: PhotoFilter | null, sectionIdsToKeepLo
 export function getThumbnailSrc(photo: Photo): string {
     const thumbnailUrl = getThumbnailUrl(photo.id)
     return `${thumbnailUrl}?v=${thumbnailVersion}`
+}
+
+
+export function onPhotosTrashed(result: EmptyTrashResult) {
+    store.dispatch(emptyTrashAction(result.photoIds))
+    if (result.updatedTags) {
+        setTags(result.updatedTags)
+    }
 }
 
 
@@ -88,7 +93,7 @@ export function updatePhotoWork(photo: Photo, update: (photoWork: PhotoWork) => 
                 store.dispatch(changePhotoWorkAction(photo.id, photoWork))
 
                 return Promise.all([
-                    BackgroundClient.storePhotoWork(photo.master_dir, photo.master_filename, photoWork),
+                    BackgroundClient.storePhotoWork(photo.masterDir, photo.masterFilename, photoWork),
                     thumbnailNeedsUpdate ? onThumbnailChange(photo.id) : Promise.resolve()
                 ])
             })
@@ -136,15 +141,15 @@ export function rotatePhotos(photos: PhotoCollection, turns: number) {
 }
 
 export function setPhotosFlagged(photos: PhotoCollection, flagged: boolean) {
-    updatePhotos(photos, { flag: flagged ? 1 : 0 })
+    updatePhotos(photos, { flag: flagged })
 }
 
 export function movePhotosToTrash(photos: PhotoCollection) {
-    updatePhotos(photos, { trashed: 1 })
+    updatePhotos(photos, { trashed: true })
 }
 
 export function restorePhotosFromTrash(photos: PhotoCollection) {
-    updatePhotos(photos, { trashed: 0 })
+    updatePhotos(photos, { trashed: false })
 }
 
 export function updatePhoto(photo: Photo, update: Partial<Photo>) {

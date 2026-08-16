@@ -3,21 +3,20 @@ import { connect } from 'react-redux'
 import { Popover, Button, IconName, Position, Menu, MenuItem, MenuDivider } from '@blueprintjs/core'
 import classnames from 'classnames'
 
-import { msg } from 'common/i18n/i18n'
-import { TagId, TagById, Device, PhotoFilter } from 'common/CommonTypes'
-
+import { TagId, TagById, PhotoFilter } from 'app/CommonTypes'
 import { setLibraryFilter } from 'app/controller/PhotoController'
+import { msg } from 'app/i18n/i18n'
 import { AppState } from 'app/state/StateTypes'
 
 import './LibraryFilterButton.less'
 
 
-type SimpleFilterType = 'all' | 'favorites' | 'trash'
-const simpleFilterTypes: SimpleFilterType[] = [ 'all', 'favorites', 'trash' ]
+type SimpleFilterType = 'all' | 'favorites' | 'trash'
+const simpleFilterTypes: SimpleFilterType[] = [ 'all', 'favorites', 'trash' ]
     // TODO: Revive Legacy code of 'version' feature
     // -> Add 'processed'
 
-type FilterType = SimpleFilterType | 'tag'
+type FilterType = SimpleFilterType | 'tag'
 
 const iconByFilterType: { [K in FilterType]: IconName | JSX.Element } = {
     all: 'book',
@@ -36,7 +35,6 @@ interface StateProps {
     libraryFilter: PhotoFilter
     tagIds: TagId[]
     tagById: TagById
-    devices: Device[]
 }
 
 interface DispatchProps {
@@ -47,12 +45,12 @@ export interface Props extends OwnProps, StateProps, DispatchProps {}
 
 export class LibraryFilterButton extends React.Component<Props> {
 
-    private onSimpleFilterClick(type: SimpleFilterType) {
-        this.props.setLibraryFilter({ type })
+    private onSimpleFilterClick(filterType: SimpleFilterType) {
+        this.props.setLibraryFilter({ filterType })
     }
 
     private onTagFilterClick(tagId: TagId) {
-        this.props.setLibraryFilter({ type: 'tag', tagId })
+        this.props.setLibraryFilter({ filterType: 'tag', tagId })
     }
 
     render() {
@@ -61,13 +59,13 @@ export class LibraryFilterButton extends React.Component<Props> {
 
         const menu = (
             <Menu className='LibraryFilterButton-menu'>
-                {simpleFilterTypes.map(type =>
+                {simpleFilterTypes.map(filterType =>
                     <MenuItem
-                        key={type}
-                        icon={iconByFilterType[type]}
-                        text={msg(`LibraryFilterButton_filter_${type}` as any)}
-                        active={type === libraryFilter.type}
-                        onClick={() => this.onSimpleFilterClick(type)}
+                        key={filterType}
+                        icon={iconByFilterType[filterType]}
+                        text={msg(`LibraryFilterButton_filter_${filterType}` as any)}
+                        active={filterType === libraryFilter.filterType}
+                        onClick={() => this.onSimpleFilterClick(filterType)}
                     />
                 )}
                 {!!props.tagIds.length &&
@@ -78,7 +76,7 @@ export class LibraryFilterButton extends React.Component<Props> {
                                 key={tagId}
                                 icon={iconByFilterType['tag']}
                                 text={props.tagById[tagId].title}
-                                active={!!(libraryFilter.type === 'tag' && libraryFilter.tagId === tagId)}
+                                active={!!(libraryFilter.filterType === 'tag' && libraryFilter.tagId === tagId)}
                                 onClick={() => this.onTagFilterClick(tagId)}
                             />
                         )}
@@ -88,10 +86,10 @@ export class LibraryFilterButton extends React.Component<Props> {
         )
 
         let activeFilterLabel: string
-        if (libraryFilter.type === 'tag') {
+        if (libraryFilter.filterType === 'tag') {
             activeFilterLabel = msg('LibraryFilterButton_filter_tag', props.tagById[libraryFilter.tagId].title)
         } else {
-            activeFilterLabel = msg(`LibraryFilterButton_filter_${libraryFilter.type}` as any)
+            activeFilterLabel = msg(`LibraryFilterButton_filter_${libraryFilter.filterType}` as any)
         }
 
         return (
@@ -118,7 +116,6 @@ const Connected = connect<StateProps, DispatchProps, OwnProps, AppState>(
             libraryFilter: state.library.filter,
             tagIds: state.data.tags.ids,
             tagById: state.data.tags.byId,
-            devices: state.data.devices,
         }
     },
     dispatch => ({

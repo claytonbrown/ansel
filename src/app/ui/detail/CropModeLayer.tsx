@@ -2,16 +2,16 @@ import React from 'react'
 import classnames from 'classnames'
 import { vec2 } from 'gl-matrix'
 
-import { PhotoWork } from 'common/CommonTypes'
-import { CameraMetrics, getInvertedProjectionMatrix, createProjectionMatrix } from 'common/util/CameraMetrics'
-import { Point, Size, Rect, Side, Corner, corners, Insets, zeroInsets } from 'common/util/GeometryTypes'
+import { PhotoWork } from 'app/CommonTypes'
+import { CameraMetrics, getInvertedProjectionMatrix, createProjectionMatrix } from 'app/util/CameraMetrics'
+import { Point, Size, Rect, Side, Corner, corners, Insets, zeroInsets } from 'app/util/GeometryTypes'
 import {
     transformRect, oppositeCorner, cornerPointOfRect, centerOfRect, intersectLineWithPolygon,
     rectFromCenterAndSize, isPointInPolygon, nearestPointOnPolygon, Vec2Like, rectFromCornerPointAndSize,
     rectFromPoints, directionOfPoints, movePoint, ceilVec2, floorVec2, roundVec2, boundsOfPoints,
     boundsOfRects, scaleRectToFitBorders
-} from 'common/util/GeometryUtil'
-import { bindMany, isShallowEqual } from 'common/util/LangUtil'
+} from 'app/util/GeometryUtil'
+import { bindMany, isShallowEqual } from 'app/util/LangUtil'
 
 import CropOverlay from './CropOverlay'
 import CropModeToolbar from './CropModeToolbar'
@@ -25,6 +25,7 @@ const minCropRectSize = 32
 export interface Props {
     topBarClassName: string
     bodyClassName: string
+    isActive: boolean
     photoWork: PhotoWork
     cameraMetrics: CameraMetrics
     onPhotoWorkEdited(photoWork: PhotoWork, boundsRect?: Rect | null): void
@@ -50,7 +51,7 @@ export default class CropModeLayer extends React.Component<Props, State> {
         this.state = { actionInfo: null, aspectRatioType: 'free', isAspectRatioLandscape: true }
     }
 
-    private setAspectRatio(aspectRatioType: AspectRatioType, isLandscape: boolean | null) {
+    private setAspectRatio(aspectRatioType: AspectRatioType, isLandscape: boolean | null) {
         const { props } = this
         const { cameraMetrics } = props
 
@@ -67,7 +68,7 @@ export default class CropModeLayer extends React.Component<Props, State> {
             const texturePolygon = createTexturePolygon(cameraMetrics)
 
             let wantedCropRectSize: Size
-            if (prevCropRect.width === textureSize.width || prevCropRect.height === textureSize.height) {
+            if (prevCropRect.width === textureSize.width || prevCropRect.height === textureSize.height) {
                 // The last crop rect was full size -> Make the next crop rect full size again
                 const maxSize = Math.max(textureSize.width, textureSize.height)
                 wantedCropRectSize = aspectRatio > 1 ?
@@ -142,7 +143,7 @@ export default class CropModeLayer extends React.Component<Props, State> {
             nextState = { actionInfo: { type: 'drag-side', dragStartMetrics } }
         }
 
-        const isHorizontal = (side === 'e' || side === 'w')
+        const isHorizontal = (side === 'e' || side === 'w')
         const { projectedPoint, boundsRect } = getProjectedDragTarget(point, dragStartMetrics,
             isHorizontal ? 'x-only' : 'y-only')
 
@@ -204,8 +205,8 @@ export default class CropModeLayer extends React.Component<Props, State> {
         // The oppositePoint stays fixed, find width/height that fits into the texture
         const texturePolygon = createTexturePolygon(cameraMetrics)
         const cornerDirection = [
-            corner === 'ne' || corner === 'se' ? 1 : -1,
-            corner === 'sw' || corner === 'se' ? 1 : -1
+            corner === 'ne' || corner === 'se' ? 1 : -1,
+            corner === 'sw' || corner === 'se' ? 1 : -1
         ]
 
         let wantedCornerPoint: Vec2Like
@@ -230,8 +231,8 @@ export default class CropModeLayer extends React.Component<Props, State> {
             width:  wantedCornerPoint[0] - oppositePoint[0],
             height: wantedCornerPoint[1] - oppositePoint[1]
         }
-        let xCutFactor = maxCutFactor(oppositePoint, [nextCropRectSize.width, 0], texturePolygon) || 1
-        let yCutFactor = maxCutFactor(oppositePoint, [0, nextCropRectSize.height], texturePolygon) || 1
+        let xCutFactor = maxCutFactor(oppositePoint, [nextCropRectSize.width, 0], texturePolygon) || 1
+        let yCutFactor = maxCutFactor(oppositePoint, [0, nextCropRectSize.height], texturePolygon) || 1
         if (aspectRatio) {
             xCutFactor = yCutFactor = Math.min(xCutFactor, yCutFactor)
         }
@@ -324,6 +325,7 @@ export default class CropModeLayer extends React.Component<Props, State> {
             <>
                 <CropModeToolbar
                     className={classnames(props.topBarClassName, 'CropModeLayer-toolbar')}
+                    isActive={props.isActive}
                     aspectRatioType={state.aspectRatioType}
                     isAspectRatioLandscape={state.isAspectRatioLandscape}
                     photoWork={props.photoWork}
@@ -404,9 +406,9 @@ function limitRectResizeToTexture(prevRect: Rect, wantedRect: Rect, texturePolyg
         }
     }
 
-    let nwStart: vec2 | null = null
-    let nwDirection: vec2 | null = null
-    let seStart: vec2 | null = null
+    let nwStart: vec2 | null = null
+    let nwDirection: vec2 | null = null
+    let seStart: vec2 | null = null
     let seDirection: vec2 | null = null
     for (const corner of corners) {
         const start = cornerPointOfRect(prevRect, corner)
@@ -467,7 +469,7 @@ function getDragStartMetrics(startCameraMetrics: CameraMetrics): DragStartMetric
     return {
         displaySize: startCameraMetrics.displaySize,
         displayScaling: startCameraMetrics.displayScaling,
-        insets: startCameraMetrics.insets || zeroInsets,
+        insets: startCameraMetrics.insets || zeroInsets,
         startZoom: startCameraMetrics.photoPosition.zoom,
         startBoundsNwScreen,
         startBoundsSeScreen,
@@ -486,7 +488,7 @@ function getDragStartMetrics(startCameraMetrics: CameraMetrics): DragStartMetric
  * outside the original bounds, the bounds will be adjusted (which will change center and zoom) so the user can drag to
  * the full borders of the image without having to drop in between.
  */
-function getProjectedDragTarget(screenPoint: Point, dragStartMetrics: DragStartMetrics, adjust: 'x-only' | 'y-only' | 'both'):
+function getProjectedDragTarget(screenPoint: Point, dragStartMetrics: DragStartMetrics, adjust: 'x-only' | 'y-only' | 'both'):
     { projectedPoint: vec2, boundsRect: Rect }
 {
     const {

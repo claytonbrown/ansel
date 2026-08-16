@@ -1,12 +1,11 @@
 import React from 'react'
 import { findDOMNode } from 'react-dom'
 import classnames from 'classnames'
-import moment = require('moment')
+import dayjs from 'dayjs'
 
-import { PhotoSectionId, PhotoSectionById } from 'common/CommonTypes'
-import { bindMany } from 'common/util/LangUtil'
-
+import { PhotoSectionId, PhotoSectionById } from 'app/CommonTypes'
 import { GridLayout, GridSectionLayout } from 'app/UITypes'
+import { bindMany } from 'app/util/LangUtil'
 
 import './GridScrollBar.less'
 
@@ -63,7 +62,7 @@ export default class GridScrollBar extends React.Component<Props, State> {
         if (!monthLabels) {
             monthLabels = []
             for (let month = 0; month < 12; month++) {
-                monthLabels[month] = moment(new Date(2000, month)).format('MMM')
+                monthLabels[month] = dayjs(new Date(2000, month)).format('MMM')
             }
         }
     }
@@ -89,13 +88,13 @@ export default class GridScrollBar extends React.Component<Props, State> {
         this.setState(nextState as any)
     }
 
-    private onWindowMouseMove(event: MouseEvent) {
+    private onWindowMouseMove(event: MouseEvent) {
         const nextState: Partial<State> = {}
         this.moveHint(event.clientY, nextState, true)
         this.setState(nextState as any)
     }
 
-    private onWindowMouseUp() {
+    private onWindowMouseUp() {
         window.removeEventListener('mousemove', this.onWindowMouseMove)
         window.removeEventListener('mouseup', this.onWindowMouseUp)
         this.setState({ isDragging: false })
@@ -256,7 +255,7 @@ function generateScaleItems(sectionLayouts: GridSectionLayout[], sectionIds: Pho
 }
 
 
-function getSectionIndexAtY(y: number, sectionLayouts: GridSectionLayout[]): number | null {
+function getSectionIndexAtY(y: number, sectionLayouts: GridSectionLayout[]): number | null {
     let left = 0
     let right = sectionLayouts.length - 1
     while (left <= right) {

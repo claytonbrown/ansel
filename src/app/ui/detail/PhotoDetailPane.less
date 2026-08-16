@@ -17,13 +17,16 @@
 }
 .PhotoDetailPane-topBar {
     top: 0;
+
+    .App.hasWindowsButtons &.isRight {
+        padding-right: @windowsButtonsWidth + 12px;
+    }
 }
 .PhotoDetailPane-zoomPane {
     position: relative;
     display: inline-block;
     margin: 0 8px;
     width: 50px;
-    -webkit-app-region: none;
     min-width: 0;
     vertical-align: middle;
 }

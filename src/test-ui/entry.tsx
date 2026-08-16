@@ -1,7 +1,7 @@
 import React from 'react'
 import { render } from 'react-dom'
 
-import { setLocale, locales, fallbackLocale } from 'common/i18n/i18n'
+import { setLocale, locales, fallbackLocale } from 'app/i18n/i18n'
 
 import UiTester from 'test-ui/core/UiTester'
 import 'test-ui/tests/LibraryTest'
@@ -11,6 +11,7 @@ import 'test-ui/tests/PhotoInfoTest'
 import 'test-ui/tests/ImportProgressButtonTest'
 import 'test-ui/tests/ExportDialogTest'
 import 'test-ui/tests/ErrorToastTest'
+import 'test-ui/tests/ErrorBoundaryTest'
 import 'test-ui/tests/GridSectionTest'
 import 'test-ui/tests/PictureTest'
 import 'test-ui/tests/CropOverlayTest'

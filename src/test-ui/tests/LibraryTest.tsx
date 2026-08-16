@@ -1,15 +1,15 @@
 import React from 'react'
 import { Button } from '@blueprintjs/core'
+import { convertFileSrc } from '@tauri-apps/api/core'
 
-import { Photo, PhotoSectionById, PhotoSectionId, PhotoFilter } from 'common/CommonTypes'
-import CancelablePromise from 'common/util/CancelablePromise'
-import { getNonRawPath } from 'common/util/DataUtil'
-import { addErrorCode } from 'common/util/LangUtil'
-import { fileUrlFromPath } from 'common/util/TextUtil'
+import { Photo, PhotoSectionById, PhotoSectionId, PhotoFilter } from 'app/CommonTypes'
+import CancelablePromise from 'app/util/CancelablePromise'
+import { getMasterPath } from 'app/util/DataUtil'
+import { addErrorCode } from 'app/util/LangUtil'
 
 import { defaultGridRowHeight } from 'app/UiConstants'
-import { FetchState } from 'app/UITypes'
 import { getGridLayoutWithoutStoreUpdate } from 'app/controller/LibraryController'
+import { InfoPhotoDataState } from 'app/state/StateTypes'
 import { Library, Props } from 'app/ui/library/Library'
 import { LibraryFilterButton } from 'app/ui/library/LibraryFilterButton'
 import SelectionSummary from 'app/ui/library/SelectionSummary'
@@ -30,7 +30,7 @@ let sharedGridRowHeight = defaultGridRowHeight
 function createDefaultProps(context: TestContext): Props {
     return {
         style: { width: '100%', height: '100%', overflow: 'hidden' },
-        topBarLeftItem: renderTopBarLeftItem({ type: 'all' }),
+        topBarLeftItem: renderTopBarLeftItem({ filterType: 'all' }),
         isActive: true,
 
         hasPhotoDirs: true,
@@ -58,14 +58,14 @@ function createDefaultProps(context: TestContext): Props {
         fetchSections: action('fetchSections'),
         fetchTags: action('fetchTags'),
         getGridLayout: getGridLayoutWithoutStoreUpdate,
-        getThumbnailSrc: (photo: Photo) => fileUrlFromPath(getNonRawPath(photo)),
+        getThumbnailSrc: (photo: Photo) => convertFileSrc(getMasterPath(photo)),
         createThumbnail: (sectionId: PhotoSectionId, photo: Photo) => {
-            if (photo.master_filename === 'dummy') {
+            if (photo.masterFilename === 'dummy') {
                 return new CancelablePromise<string>(() => {})
-            } else if (photo.master_filename === 'error_master-missing') {
+            } else if (photo.masterFilename === 'error_master-missing') {
                 return new CancelablePromise<string>(Promise.reject(addErrorCode(new Error('test error'), 'master-missing')))
             } else {
-                return new CancelablePromise<string>(Promise.resolve(fileUrlFromPath(getNonRawPath(photo))))
+                return new CancelablePromise<string>(Promise.resolve(convertFileSrc(getMasterPath(photo))))
             }
         },
         setGridRowHeight: (gridRowHeight: number) => {
@@ -101,7 +101,6 @@ function renderTopBarLeftItem(libraryFilter: PhotoFilter): JSX.Element {
                         updated_at: null
                     }
                 }}
-                devices={[]}
                 setLibraryFilter={action('setLibraryFilter')}
             />
             <Button
@@ -211,11 +210,10 @@ addSection('Library')
                 showInfo={true}
                 infoPhoto={defaultSection.photoData[infoPhotoId]}
                 infoPhotoData={{
-                    fetchState: FetchState.IDLE,
+                    state: InfoPhotoDataState.Loaded,
                     sectionId: defaultSectionId,
                     photoId: infoPhotoId,
                     photoDetail: {
-                        versions: [],
                         tags: []
                     },
                     masterFileSize: 3380326,
@@ -283,7 +281,7 @@ addSection('Library')
             {...createDefaultProps(context)}
             bottomBarLeftItem={
                 <ImportProgressButton
-                    progress={{ phase: 'import-photos', isPaused: false, total: 1042, processed: 120, added: 40, removed: 21, currentPath: '/user/me/documents/mypics/2018/summer vacation' }}
+                    progress={{ phase: 'importPhotos', isPaused: false, total: 1042, processed: 120, added: 40, removed: 21, currentPath: '/user/me/documents/mypics/2018/summer vacation' }}
                     toggleImportPaused={action('toggleImportPaused')}
                     cancelImport={action('cancelImport')}
                 />
@@ -296,7 +294,7 @@ addSection('Library')
             {...createDefaultProps(context)}
             bottomBarLeftItem={
                 <ImportProgressButton
-                    progress={{ phase: 'scan-dirs', isPaused: false, total: 120, processed: 0, added: 0, removed: 0, currentPath: '/user/me/documents/mypics/2016/birthday party' }}
+                    progress={{ phase: 'scanDirs', isPaused: false, total: 120, processed: 0, added: 0, removed: 0, currentPath: '/user/me/documents/mypics/2016/birthday party' }}
                     toggleImportPaused={action('toggleImportPaused')}
                     cancelImport={action('cancelImport')}
                 />
@@ -337,9 +335,9 @@ addSection('Library')
     .add('thumbnail error', context => {
         let photos = [ ...defaultPhotos ]
         const errorPhoto1 = createRandomDummyPhoto()
-        errorPhoto1.master_filename = 'error_load-failed'
+        errorPhoto1.masterFilename = 'error_load-failed'
         const errorPhoto2 = createRandomDummyPhoto()
-        errorPhoto2.master_filename = 'error_master-missing'
+        errorPhoto2.masterFilename = 'error_master-missing'
         photos.splice(1, 0, errorPhoto1, errorPhoto2)
         const section = createSection(defaultSectionId, photos)
 
@@ -375,7 +373,7 @@ addSection('Library')
     .add('Empty favorites', context => (
         <Library
             {...createDefaultProps(context)}
-            topBarLeftItem={renderTopBarLeftItem({ type: 'favorites' })}
+            topBarLeftItem={renderTopBarLeftItem({ filterType: 'favorites' })}
             libraryFilterType={'favorites'}
             photoCount={0}
             sectionIds={[]}
@@ -385,7 +383,7 @@ addSection('Library')
     .add('Empty trash', context => (
         <Library
             {...createDefaultProps(context)}
-            topBarLeftItem={renderTopBarLeftItem({ type: 'trash' })}
+            topBarLeftItem={renderTopBarLeftItem({ filterType: 'trash' })}
             libraryFilterType={'trash'}
             photoCount={0}
             sectionIds={[]}

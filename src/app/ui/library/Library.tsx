@@ -2,20 +2,18 @@ import classNames from 'classnames'
 import React from 'react'
 import { connect } from 'react-redux'
 import { bindActionCreators } from 'redux'
-import { ipcRenderer } from 'electron'
 import { Button, NonIdealState, Spinner, MaybeElement, Icon, INonIdealStateProps } from '@blueprintjs/core'
 
-import { PhotoId, Photo, PhotoSectionId, PhotoSectionById, PhotoFilterType } from 'common/CommonTypes'
-import { msg } from 'common/i18n/i18n'
-import CancelablePromise from 'common/util/CancelablePromise'
-import { bindMany } from 'common/util/LangUtil'
-
+import BackgroundClient from 'app/BackgroundClient'
+import { PhotoId, Photo, PhotoSectionId, PhotoSectionById, PhotoFilterType, EmptyTrashResult } from 'app/CommonTypes'
 import { setDetailPhotoById } from 'app/controller/DetailController'
 import { defaultLibrarySelectionController, LibrarySelectionController } from 'app/controller/LibrarySelectionController'
 import { GetGridLayoutFunction, getGridLayoutAndUpdateStore, createThumbnail } from 'app/controller/LibraryController'
 import { PhotoActionController, defaultPhotoActionController } from 'app/controller/PhotoActionController'
-import { fetchTotalPhotoCount, fetchSections, getThumbnailSrc } from 'app/controller/PhotoController'
+import { fetchTotalPhotoCount, fetchSections, getThumbnailSrc, onPhotosTrashed } from 'app/controller/PhotoController'
 import { fetchTags, setPhotoTags } from 'app/controller/PhotoTagController'
+import { showError } from 'app/ErrorPresenter'
+import { msg } from 'app/i18n/i18n'
 import { setGridRowHeightAction, setShowInfoAction } from 'app/state/actions'
 import { getInfoPhoto, getPreselectionRange, getTagTitles } from 'app/state/selectors'
 import { AppState, InfoPhotoData, PhotoLibraryPosition, PreselectionRange, SelectionState } from 'app/state/StateTypes'
@@ -23,7 +21,8 @@ import PhotoInfo from 'app/ui/info/PhotoInfo'
 import LogoDecoration from 'app/ui/widget/LogoDecoration'
 import { keySymbols } from 'app/UiConstants'
 import { FetchState } from 'app/UITypes'
-import { getCollectionSize } from 'app/util/PhotoCollectionResolver'
+import CancelablePromise from 'app/util/CancelablePromise'
+import { bindMany } from 'app/util/LangUtil'
 
 import LibraryTopBar from './LibraryTopBar'
 import LibraryBottomBar from './LibraryBottomBar'
@@ -44,6 +43,7 @@ interface OwnProps {
 }
 
 interface StateProps {
+    isMac: boolean
     hasPhotoDirs: boolean
     isFetching: boolean
     isImporting: boolean
@@ -52,8 +52,8 @@ interface StateProps {
     totalPhotoCount: number | null
     sectionIds: PhotoSectionId[]
     sectionById: PhotoSectionById
-    activePhoto: PhotoLibraryPosition | null
-    selection: SelectionState | null
+    activePhoto: PhotoLibraryPosition | null
+    selection: SelectionState | null
     preselectionRange: PreselectionRange | null
     showInfo: boolean
     infoPhoto?: Photo
@@ -62,6 +62,7 @@ interface StateProps {
     gridRowHeight: number
     photoActionController: PhotoActionController
     librarySelectionController: LibrarySelectionController
+    onPhotosTrashed(result: EmptyTrashResult): void
 }
 
 interface DispatchProps {
@@ -85,22 +86,7 @@ export class Library extends React.Component<Props> {
 
     constructor(props: Props) {
         super(props)
-        bindMany(this, 'openExport', 'toggleShowInfo', 'getNonIdealStateDecorationWidth')
-    }
-
-    componentDidUpdate(prevProps: Props) {
-        const props = this.props
-
-        const isExportEnabled = props.isActive && getCollectionSize(props.selection || props.activePhoto) > 0
-        const prevIsExportEnabled = prevProps.isActive && getCollectionSize(prevProps.selection || prevProps.activePhoto) > 0
-        if (isExportEnabled !== prevIsExportEnabled) {
-            ipcRenderer.send('toggleExportMenu', isExportEnabled)
-            if (isExportEnabled) {
-                ipcRenderer.on('exportClicked', this.openExport)
-            } else {
-                ipcRenderer.removeAllListeners('exportClicked')
-            }
-        }
+        bindMany(this, 'toggleShowInfo', 'getNonIdealStateDecorationWidth')
     }
 
     componentDidMount() {
@@ -108,13 +94,6 @@ export class Library extends React.Component<Props> {
         props.fetchTotalPhotoCount()
         props.fetchSections()
         props.fetchTags()
-    }
-
-    private openExport() {
-        const props = this.props
-        if (props.selection) {
-            props.photoActionController.openExport(props.selection)
-        }
     }
 
     private toggleShowInfo() {
@@ -128,6 +107,7 @@ export class Library extends React.Component<Props> {
 
     render() {
         const { props } = this
+        const ctrlOrMacCommand = props.isMac ? keySymbols.macCommand : keySymbols.ctrl
 
         let nonIdealStateProps: INonIdealStateProps | null = null
         if (props.totalPhotoCount === 0 && !props.isFetching && !props.isImporting) {
@@ -152,7 +132,7 @@ export class Library extends React.Component<Props> {
                     description: (
                         <>
                             {descriptionSplits[0]}
-                            <code>{keySymbols.ctrlOrMacCommand}</code>+<code>R</code>
+                            <code>{ctrlOrMacCommand}</code>+<code>R</code>
                             {descriptionSplits[1]}
                         </>
                     ),
@@ -188,6 +168,7 @@ export class Library extends React.Component<Props> {
             >
                 <LibraryTopBar
                     className="Library-topBar"
+                    isActive={props.isActive}
                     leftItem={props.topBarLeftItem}
                     selectedPhotos={props.selection || props.activePhoto}
                     isShowingTrash={props.libraryFilterType === 'trash'}
@@ -195,6 +176,7 @@ export class Library extends React.Component<Props> {
                     photosCount={props.photoCount}
                     photoActionController={props.photoActionController}
                     toggleShowInfo={this.toggleShowInfo}
+                    onPhotosTrashed={props.onPhotosTrashed}
                 />
                 <div className="Library-body">
                     {nonIdealStateProps &&
@@ -251,10 +233,11 @@ const Connected = connect<StateProps, DispatchProps, OwnProps, AppState>(
         const { sections } = state.data
         return {
             ...props,
+            isMac: state.data.uiConfig.platform === 'macos',
             hasPhotoDirs: state.data.settings.photoDirs.length !== 0,
             isFetching: sections.totalPhotoCount === null || sections.fetchState === FetchState.FETCHING,
             isImporting: !!state.import && state.import.progress.phase !== 'error',
-            libraryFilterType: state.library.filter.type,
+            libraryFilterType: state.library.filter.filterType,
             photoCount: sections.photoCount,
             totalPhotoCount: sections.totalPhotoCount,
             sectionIds: sections.ids,
@@ -269,6 +252,7 @@ const Connected = connect<StateProps, DispatchProps, OwnProps, AppState>(
             gridRowHeight: state.library.display.gridRowHeight,
             photoActionController: defaultPhotoActionController,
             librarySelectionController: defaultLibrarySelectionController,
+            onPhotosTrashed,
         }
     },
     dispatch => ({
@@ -284,7 +268,8 @@ const Connected = connect<StateProps, DispatchProps, OwnProps, AppState>(
             dispatch(setShowInfoAction('library', showInfo))
         },
         startScanning: () => {
-            ipcRenderer.send('start-scanning')
+            BackgroundClient.startImport()
+                .catch(error => showError('Starting import failed', error))
         },
         ...bindActionCreators({
             setGridRowHeight: setGridRowHeightAction,

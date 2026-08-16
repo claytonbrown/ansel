@@ -7,14 +7,9 @@
 
 import { IKeyCombo, getKeyCombo, getKeyComboString, comboMatches, parseKeyCombo } from '@blueprintjs/core'
 
-import { msg } from 'common/i18n/i18n'
-import { assertRendererProcess } from 'common/util/ElectronUtil'
-
+import { msg } from 'app/i18n/i18n'
 import { setShiftPressedAction } from 'app/state/actions'
 import store from 'app/state/store'
-
-
-assertRendererProcess()
 
 
 export interface Command {
@@ -23,7 +18,7 @@ export interface Command {
     /** The parsed hotkey combination (will be set by HotkeyController) */
     parsedCombo?: IKeyCombo
     /** Whether the hotkey can be triggered. (default: `true`) */
-    enabled?: boolean | (() => boolean)
+    enabled?: boolean | (() => boolean)
     /** Human-friendly label for the hotkey. */
     label?: string
     /** event handler. */
@@ -48,13 +43,13 @@ let isInitialized = false
 let prevIsShiftPressed: boolean | null = null
 
 
-export function addCommandGroup(commands: Command[] | { [K in any]: Command }): CommandGroupId {
+export function addCommandGroup(commands: Command[] | { [K in any]: Command }, enabled?: boolean): CommandGroupId {
     if (!Array.isArray(commands)) {
         commands = Object.values(commands)
     }
 
     const groupId = nextGroupId++
-    groups[groupId] = { groupId, commands, enabled: true }
+    groups[groupId] = { groupId, commands, enabled: enabled !== false }
 
     if (!isInitialized) {
         isInitialized = true
@@ -91,13 +86,18 @@ export function formatCommandLabel(label: string | null | undefined, combo: stri
 }
 
 export function formatCombo(combo: string): string {
-    switch (combo) {
-        case 'left': combo = '\u21E6'; break
-        case 'right': combo = '\u21E8'; break
-        case 'enter': combo = '\u23CE'; break
-        case 'space':
-            combo = msg(`key_${combo}` as any)
-            break;
+    if (combo.length === 1) {
+        combo = combo.toUpperCase()
+    } else {
+        switch (combo) {
+            case 'left': combo = '\u21E6'; break
+            case 'right': combo = '\u21E8'; break
+            case 'enter': combo = '\u23CE'; break
+            case 'backspace':
+            case 'space':
+                combo = msg(`key_${combo}` as any)
+                break;
+        }
     }
     return `[${combo}]`
 }

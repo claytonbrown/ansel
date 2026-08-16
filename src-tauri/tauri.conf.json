@@ -1,0 +1,60 @@
+{
+  "$schema": "https://schema.tauri.app/config/2",
+  "productName": "Picturama",
+  "version": "2.0.0",
+  "identifier": "io.github.picturama",
+  "build": {
+    "frontendDist": "../dist",
+    "devUrl": "http://localhost:3030",
+    "beforeDevCommand": "npm run dev",
+    "beforeBuildCommand": "npm run build"
+  },
+  "app": {
+    "windows": [
+      {
+        "label": "main",
+        "title": "Picturama",
+        "backgroundColor": "#1e1e1e",
+        "width": 1280,
+        "height": 800,
+        "minWidth": 800,
+        "minHeight": 600,
+        "resizable": true,
+        "fullscreen": false,
+        "visible": false,
+        "titleBarStyle": "Overlay",
+        "trafficLightPosition": { "x": 12, "y": 21 },
+        "hiddenTitle": true,
+        "decorations": true
+      }
+    ],
+    "security": {
+        "assetProtocol": {
+            "enable": true,
+            "scope": {
+                "allow": ["$RESOURCE/**"],
+                "requireLiteralLeadingDot": false
+            }
+        },
+        "csp": "default-src 'self'; img-src 'self' asset: http://asset.localhost blob: data:; style-src 'self' 'unsafe-inline'; connect-src 'self' ipc: http://ipc.localhost; base-uri 'self'; form-action 'none'"
+    }
+  },
+  "bundle": {
+    "active": true,
+    "targets": ["app", "dmg", "nsis", "appimage"],
+    "resources": {
+      "../migrations/*": "app/migrations/",
+      "../licenses.json.gz": "app/licenses.json.gz"
+    },
+    "icon": [
+      "icons/32x32.png",
+      "icons/128x128.png",
+      "icons/128x128@2x.png",
+      "icons/icon.icns",
+      "icons/icon.ico"
+    ],
+    "macOS": {
+      "minimumSystemVersion": "11.0"
+    }
+  }
+}

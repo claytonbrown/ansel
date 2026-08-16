@@ -14,8 +14,9 @@
     padding-right: 4px;
     transition: all @transition-time ease-out;
 
+    user-select: none;
     -webkit-user-select: none;
-    -webkit-app-region: no-drag; // Reset drag region of underlying Toolbar
+    cursor: default;  // No text-selection cursor on title texts
 
     &.isTopBar {
         border-top: 1px solid transparent;
@@ -32,15 +33,16 @@
         flex: 1 0 auto;
         white-space: nowrap;
     }
+    .App.hasNativeTrafficLightButtons &.isTopBar.isRight {
+        .bp3-button:last-child {
+            border-top-right-radius: 12px;  // Counter the big border radius of a macOS window, so the button is not cut
+        }
+    }
 }
 
 .Toolbar-spacer {
     height: 100%;
     flex: 0 1 100%;
-
-    .Toolbar.isTopBar & {
-        -webkit-app-region: drag;
-    }
 
     .bp3-button + &,
     .bp3-button-group + & {

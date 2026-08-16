@@ -2,23 +2,22 @@ import React from 'react'
 import { findDOMNode } from 'react-dom'
 import classnames from 'classnames'
 
-import { CameraMetrics, PhotoPosition, maxZoom, RequestedPhotoPosition, limitPhotoPosition } from 'common/util/CameraMetrics'
-import { bindMany, isShallowEqual } from 'common/util/LangUtil'
-
+import { CameraMetrics, PhotoPosition, maxZoom, RequestedPhotoPosition, limitPhotoPosition } from 'app/util/CameraMetrics'
 import DragDropController from 'app/util/DragDropController'
-import { Point } from 'common/util/GeometryTypes'
+import { Point } from 'app/util/GeometryTypes'
+import { bindMany, isShallowEqual } from 'app/util/LangUtil'
 
 import './ViewModeOverlay.less'
 
 
 export interface Props {
     className?: any
-    cameraMetrics: CameraMetrics | null
+    cameraMetrics: CameraMetrics | null
     setPhotoPosition(photoPosition: RequestedPhotoPosition): void
 }
 
 interface State {
-    dragStart: { x: number, y: number, photoPosition: PhotoPosition } | null
+    dragStart: { x: number, y: number, photoPosition: PhotoPosition } | null
 }
 
 export default class ViewModeOverlay extends React.Component<Props, State> {

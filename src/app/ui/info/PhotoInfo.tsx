@@ -1,21 +1,19 @@
-import { clipboard } from 'electron'
 import classNames from 'classnames'
+import copyToClipboard from 'copy-text-to-clipboard'
 import React from 'react'
 import { Button, Icon, NonIdealState, Popover, Position, Classes, Menu, MenuItem, MaybeElement } from '@blueprintjs/core'
-import moment from 'moment'
-
-import { Photo, ExifData, ExifSegment, allExifSegments } from 'common/CommonTypes'
-import { msg, hasMsg } from 'common/i18n/i18n'
-import { bindMany } from 'common/util/LangUtil'
-import { getMasterPath } from 'common/util/DataUtil'
-import { formatNumber } from 'common/util/TextUtil'
+import dayjs from 'dayjs'
+import { FaTags } from 'react-icons/fa'
 
 import BackgroundClient from 'app/BackgroundClient'
-import { InfoPhotoData } from 'app/state/StateTypes'
-import { FetchState } from 'app/UITypes'
+import { Photo, ExifData, ExifSegment, allExifSegments } from 'app/CommonTypes'
+import { msg, hasMsg } from 'app/i18n/i18n'
+import { InfoPhotoData, InfoPhotoDataState } from 'app/state/StateTypes'
 import MiniWorldMap from 'app/ui/widget/MiniWorldMap'
 import Toolbar from 'app/ui/widget/Toolbar'
-import FaIcon from 'app/ui/widget/icon/FaIcon'
+import { bindMany } from 'app/util/LangUtil'
+import { getMasterPath } from 'app/util/DataUtil'
+import { formatNumber } from 'app/util/TextUtil'
 
 import TagEditor from './TagEditor'
 
@@ -34,6 +32,10 @@ const exifFilters: { [K in ExifSegment]?: string[] } = {
 	iptc:      ['Headline', 'Byline', 'Credit', 'Caption', 'Source', 'Country'],
 	icc:       ['ProfileVersion', 'ProfileClass', 'ColorSpaceData', 'ProfileConnectionSpace', 'ProfileFileSignature', 'DeviceManufacturer', 'RenderingIntent', 'ProfileCreator', 'ProfileDescription'],
 }
+
+// Segments the backend does not parse (yet). A photo may well contain them — we simply don't read
+// them — so these get a "not read" message instead of the misleading "photo has no ..." one.
+const unreadExifSegments: ExifSegment[] = ['jfif', 'iptc', 'icc']
 
 export interface Props {
     style?: any
@@ -70,19 +72,20 @@ export default class PhotoInfo extends React.Component<Props, State> {
 
     private copyPhotoPath() {
         if (this.props.photo) {
-            clipboard.writeText(getMasterPath(this.props.photo))
+            copyToClipboard(getMasterPath(this.props.photo))
         }
     }
 
     private copyCoordinates() {
         const coordinates = this.getCoordinates()
         if (coordinates) {
-            clipboard.writeText(formatLatLon(coordinates))
+            copyToClipboard(formatLatLon(coordinates))
         }
     }
 
     private getCoordinates(): { lat: number, lon: number } | null {
-        const exifData = this.props.photoData?.exifData
+        const { photoData } = this.props
+        const exifData = (photoData?.state === InfoPhotoDataState.Loaded) && photoData.exifData
         if (exifData && exifData.gps && typeof exifData.gps.latitude === 'number' && typeof exifData.gps.longitude === 'number') {
             return { lat: exifData.gps.latitude, lon: exifData.gps.longitude }
         } else {
@@ -112,27 +115,36 @@ export default class PhotoInfo extends React.Component<Props, State> {
         if (!props.isActive) {
             body = null
         } else if (photo && photoData) {
-            const { metaData } = photoData
-            const momentCreated = moment(photo.created_at)
+            const metaData = (photoData.state === InfoPhotoDataState.Loaded) ? photoData.metaData : null
+            const dayjsCreated = dayjs(photo.createdAt)
             const coordinates = this.getCoordinates()
 
             body = (
                 <>
+                    {(photoData.state === InfoPhotoDataState.MasterIsMissing) &&
+                        <div className='PhotoInfo-infoRow'>
+                            <Icon className='PhotoInfo-infoIcon' icon='delete' size={infoIconSize} />
+                            <div className='PhotoInfo-infoBody'>
+                                <h1>{msg('common_error_photoNotExisting')}</h1>
+                                <div className='PhotoInfo-minorInfo'>{msg('common_error_photoNotExisting_desc')}</div>
+                            </div>
+                        </div>
+                    }
                     <div className="PhotoInfo-infoRow">
-                        <Icon className="PhotoInfo-infoIcon" icon="calendar" iconSize={infoIconSize} />
+                        <Icon className="PhotoInfo-infoIcon" icon="calendar" size={infoIconSize} />
                         <div className="PhotoInfo-infoBody">
-                            <h1>{momentCreated.format('LL')}</h1>
+                            <h1>{dayjsCreated.format('LL')}</h1>
                             <div className="PhotoInfo-minorInfo">
-                                {`${momentCreated.format('dd')}, ${momentCreated.format('LT')} \u00b7 ${momentCreated.fromNow()}`}
+                                {`${dayjsCreated.format('dd')}, ${dayjsCreated.format('LT')} \u00b7 ${dayjsCreated.fromNow()}`}
                             </div>
                         </div>
                     </div>
                     <div className="PhotoInfo-infoRow">
-                        <Icon className="PhotoInfo-infoIcon" icon="media" iconSize={infoIconSize} />
+                        <Icon className="PhotoInfo-infoIcon" icon="media" size={infoIconSize} />
                         <div className="PhotoInfo-infoBody">
                             <h1 className="PhotoInfo-infoTitle hasColumns">
                                 <div className="PhotoInfo-shrinkable" title={getMasterPath(photo)}>
-                                    {photo.master_filename}
+                                    {photo.masterFilename}
                                 </div>
                                 <Popover position={Position.BOTTOM_RIGHT}>
                                     <span className={classNames('PhotoInfo-breadcrumbs',  Classes.BREADCRUMBS_COLLAPSED)} />
@@ -143,20 +155,20 @@ export default class PhotoInfo extends React.Component<Props, State> {
                                 </Popover>
                             </h1>
                             <div className="PhotoInfo-minorInfo hasColumns">
-                                <div>{formatImageMegaPixel(photo.master_width, photo.master_height)}</div>
-                                <div>{`${photo.master_width} \u00d7 ${photo.master_height}`}</div>
+                                <div>{formatImageMegaPixel(photo.masterWidth, photo.masterHeight)}</div>
+                                <div>{`${photo.masterWidth} \u00d7 ${photo.masterHeight}`}</div>
                                 <div>{renderPhotoSize(photoData)}</div>
                             </div>
-                            {(photo.edited_width !== photo.master_width || photo.edited_height !== photo.master_height) &&
+                            {(photo.editedWidth !== photo.masterWidth || photo.editedHeight !== photo.masterHeight) &&
                                 <div className='PhotoInfo-minorInfo isCentered'>
-                                    {`(${photo.edited_width} \u00d7 ${photo.edited_height})`}
+                                    {`(${photo.editedWidth} \u00d7 ${photo.editedHeight})`}
                                 </div>
                             }
                         </div>
                     </div>
                     {metaData && (metaData.camera || metaData.aperture || metaData.exposureTime || metaData.focalLength || metaData.iso) &&
                         <div className="PhotoInfo-infoRow">
-                            <Icon className="PhotoInfo-infoIcon" icon="camera" iconSize={infoIconSize} />
+                            <Icon className="PhotoInfo-infoIcon" icon="camera" size={infoIconSize} />
                             <div className="PhotoInfo-infoBody">
                                 {metaData.camera &&
                                     <h1>{metaData.camera}</h1>
@@ -178,19 +190,21 @@ export default class PhotoInfo extends React.Component<Props, State> {
                             </div>
                         </div>
                     }
-                    <div className="PhotoInfo-infoRow">
-                        <FaIcon className="PhotoInfo-infoIcon" name="tags" style={{ fontSize: infoIconSize }} />
-                        <TagEditor
-                            className="PhotoInfo-tagEditor PhotoInfo-infoBody"
-                            photo={props.photo}
-                            photoDetail={photoData.photoDetail}
-                            tags={props.tags}
-                            setPhotoTags={props.setPhotoTags}
-                        />
-                    </div>
+                    {(photoData.state === InfoPhotoDataState.Loaded || photoData.state === InfoPhotoDataState.Loading) &&
+                        <div className="PhotoInfo-infoRow">
+                            <FaTags className="PhotoInfo-infoIcon" style={{ fontSize: infoIconSize }} />
+                            <TagEditor
+                                className="PhotoInfo-tagEditor PhotoInfo-infoBody"
+                                photo={props.photo}
+                                photoDetail={photoData.state === InfoPhotoDataState.Loaded ? photoData.photoDetail : null}
+                                tags={props.tags}
+                                setPhotoTags={props.setPhotoTags}
+                            />
+                        </div>
+                    }
                     {coordinates &&
                         <div className='PhotoInfo-infoRow'>
-                            <Icon className='PhotoInfo-infoIcon' icon='map-marker' iconSize={infoIconSize} />
+                            <Icon className='PhotoInfo-infoIcon' icon='map-marker' size={infoIconSize} />
                             <div className='PhotoInfo-infoBody'>
                                 <h1 className="PhotoInfo-infoTitle hasColumns">
                                     <div>{formatLatLon(coordinates)}</div>
@@ -208,9 +222,9 @@ export default class PhotoInfo extends React.Component<Props, State> {
                             </div>
                         </div>
                     }
-                    {photoData.exifData &&
+                    {(photoData.state === InfoPhotoDataState.Loaded) && photoData.exifData &&
                         <div className='PhotoInfo-infoRow'>
-                            <Icon className='PhotoInfo-infoIcon' icon='th' iconSize={infoIconSize} />
+                            <Icon className='PhotoInfo-infoIcon' icon='th' size={infoIconSize} />
                             <div className='PhotoInfo-infoBody'>
                                 <h1 className="PhotoInfo-infoTitle hasColumns">
                                     <div>{msg('PhotoInfo_exifData')}</div>
@@ -222,7 +236,7 @@ export default class PhotoInfo extends React.Component<Props, State> {
                             </div>
                         </div>
                     }
-                    {photoData.exifData && state.showExif &&
+                    {(photoData.state === InfoPhotoDataState.Loaded) && photoData.exifData && state.showExif &&
                         this.renderExifData(photoData.exifData)
                     }
                 </>
@@ -240,9 +254,9 @@ export default class PhotoInfo extends React.Component<Props, State> {
     
         return (
             <div className={classNames(props.className, 'PhotoInfo bp3-dark')} style={props.style}>
-                <Toolbar className="PhotoInfo-topBar">
+                <Toolbar className="PhotoInfo-topBar" isTopBar isRight>
                     <span className="PhotoInfo-title">{msg('PhotoInfo_title')}</span>
-                    <Toolbar.Spacer/>
+                    <Toolbar.Spacer isTopBar/>
                     <Button icon="cross" minimal={true} onClick={props.closeInfo} />
                 </Toolbar>
                 <div className='PhotoInfo-body'>
@@ -263,9 +277,11 @@ export default class PhotoInfo extends React.Component<Props, State> {
 
                     let body: any
                     if (!segmentData) {
+                        const noValueKey = unreadExifSegments.indexOf(exifSegment) !== -1
+                            ? 'PhotoInfo_segmentNotRead' : 'PhotoInfo_noValue'
                         body = (
                             <div className='PhotoInfo-noValueMessage'>
-                                {msg('PhotoInfo_noValue', title)}
+                                {msg(noValueKey, title)}
                             </div>
                         )
                     } else if (segmentData instanceof Uint8Array) {
@@ -314,20 +330,25 @@ function formatImageMegaPixel(width, height): string {
     return `${formatNumber(sizeMp, 1)} MP`
 }
 
-function renderPhotoSize(photoData: InfoPhotoData): string | JSX.Element {
-    const bytes = photoData.masterFileSize
-    if (photoData.fetchState === FetchState.FETCHING) {
-        return '...'
-    } else if (bytes === null) {
-        return (
-            <Icon icon='warning-sign' htmlTitle={msg('PhotoInfo_error_fetchPhotoSize')}/>
-        )
-    } else if (bytes < 1000) {
-        return `${bytes} byte`
-    } else if (bytes < 1000000) {
-        return `${formatNumber(bytes / 1000, 1)} kB`
-    } else {
-        return `${formatNumber(bytes / 1000000, 1)} MB`
+function renderPhotoSize(photoData: InfoPhotoData): string | JSX.Element {
+    switch (photoData.state) {
+        case InfoPhotoDataState.Loading:
+            return '...'
+        case InfoPhotoDataState.MasterIsMissing:
+            return '-'
+        case InfoPhotoDataState.Error:
+            return (
+                <Icon icon='warning-sign' htmlTitle={msg('PhotoInfo_error_fetchPhotoSize')}/>
+            )
+        default:
+            const bytes = photoData.masterFileSize
+            if (bytes < 1000) {
+                return `${bytes} byte`
+            } else if (bytes < 1000000) {
+                return `${formatNumber(bytes / 1000, 1)} kB`
+            } else {
+                return `${formatNumber(bytes / 1000000, 1)} MB`
+            }
     }
 }
 
@@ -357,6 +378,18 @@ function capitalize(string: string): string {
 	return string.charAt(0).toUpperCase() + string.slice(1)
 }
 
+// EXIF/XMP timestamps arrive as ISO-8601 strings (e.g. "2019-09-12T18:22:17", possibly with a
+// timezone). Detect a full date+time and render it in the active locale via dayjs; any other string
+// (including date-only values) is left untouched.
+const isoDateTimeRegex = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}/
+function formatExifDateTime(value: string): string | null {
+    if (!isoDateTimeRegex.test(value)) {
+        return null
+    }
+    const parsed = dayjs(value)
+    return parsed.isValid() ? parsed.format('L LT') : null
+}
+
 function renderExifEntry(entry: [string, any], showAll: boolean): JSX.Element | null {
     const [ key, value ] = entry
     if (value == null) {
@@ -366,7 +399,10 @@ function renderExifEntry(entry: [string, any], showAll: boolean): JSX.Element | 
     let formattedValue: string
     if (typeof value === 'string') {
         const stringLimit = 300
-        if (showAll || value.length <= stringLimit) {
+        const formattedDate = formatExifDateTime(value)
+        if (formattedDate !== null) {
+            formattedValue = formattedDate
+        } else if (showAll || value.length <= stringLimit) {
             formattedValue = value
         } else {
             formattedValue = value.substr(0, stringLimit) + ' ... ' + msg('PhotoInfo_andMore', value.length - stringLimit)

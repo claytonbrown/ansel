@@ -1,4 +1,4 @@
-import { PhotoId, TagId, TagById, Device, PhotoSectionId, PhotoSectionById, Settings, UiConfig, PhotoDetail, PhotoWork, ImportProgress, PhotoFilter, PhotoExportOptions, PhotoExportProgress, MetaData, ExifData, Photo} from 'common/CommonTypes'
+import { PhotoId, TagId, TagById, PhotoSectionId, PhotoSectionById, Settings, UiConfig, PhotoDetail, PhotoWork, ImportProgress, PhotoFilter, PhotoExportOptions, PhotoExportProgress, MetaData, ExifData, Photo} from 'app/CommonTypes'
 import { FetchState } from 'app/UITypes'
 
 
@@ -28,7 +28,6 @@ export type DataState = {
     readonly uiConfig: UiConfig
     readonly settings: Settings
     readonly tags: TagsState
-    readonly devices: DevicesState
     readonly sections: SectionsState
 }
 
@@ -44,10 +43,10 @@ export interface LibraryState {
      *   - acts as anchor for shift-(de)selection
      *   - has the keyboard focus
      */
-    readonly activePhoto: PhotoLibraryPosition | null
+    readonly activePhoto: PhotoLibraryPosition | null
     /** The photo over which the mouse is currently hovering */
-    readonly hoverPhoto: PhotoLibraryPosition | null
-    readonly selection: SelectionState | null
+    readonly hoverPhoto: PhotoLibraryPosition | null
+    readonly selection: SelectionState | null
 }
 
 export interface DisplayState {
@@ -92,12 +91,10 @@ export type TagsState = {
     readonly byId: TagById
 }
 
-export type DevicesState = Device[]
-
 export type SectionsState = {
     readonly fetchState: FetchState
     /** The total number of photos (when no filter is applied). Is null before fetched for the first time. */
-    readonly totalPhotoCount: number | null
+    readonly totalPhotoCount: number | null
     /** The number of photos with the current filter applied */
     readonly photoCount: number
     readonly ids: PhotoSectionId[]
@@ -114,7 +111,7 @@ export type DetailState = {
         /** Is `null` while loading */
         readonly photoWork: PhotoWork | null
     }
-} | null
+} | null
 
 
 export interface InfoState {
@@ -123,17 +120,33 @@ export interface InfoState {
     readonly photoData?: InfoPhotoData
 }
 
-export interface InfoPhotoData {
-    fetchState: FetchState
-    sectionId: PhotoSectionId
+export enum InfoPhotoDataState { Loaded, Loading, MasterIsMissing, Error }
+export interface LoadedInfoPhotoDataWithoutSection {
+    state: InfoPhotoDataState.Loaded
     photoId: PhotoId
-    /** Is `null` while loading */
-    photoDetail: PhotoDetail | null
-    masterFileSize: number | null
-    metaData: MetaData | null
+    photoDetail: PhotoDetail
+    masterFileSize: number
+    metaData: MetaData
     exifData: ExifData | null
 }
 
+export type InfoPhotoDataWithoutSection =
+    LoadedInfoPhotoDataWithoutSection |
+    {
+        state: InfoPhotoDataState.MasterIsMissing
+        photoId: PhotoId
+        photoDetail: PhotoDetail
+    } |
+    {
+        state: InfoPhotoDataState.Loading | InfoPhotoDataState.Error
+        photoId: PhotoId
+    }
+export type LoadedInfoPhotoData = LoadedInfoPhotoDataWithoutSection & {
+    sectionId: PhotoSectionId
+}
+export type InfoPhotoData = InfoPhotoDataWithoutSection & {
+    sectionId: PhotoSectionId
+}
 
 export type ImportState = {
     readonly progress: ImportProgress
@@ -144,5 +157,5 @@ export type ExportState = {
     readonly photos: PhotoCollection
     readonly exportOptions: PhotoExportOptions
     readonly showRemoveInfoDesc: boolean
-    readonly progress: PhotoExportProgress | null
+    readonly progress: PhotoExportProgress | null
 } | null

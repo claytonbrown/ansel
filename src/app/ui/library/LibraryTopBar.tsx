@@ -1,28 +1,31 @@
-import { ipcRenderer } from 'electron'
 import classNames from 'classnames'
 import React from 'react'
 import { Button, MaybeElement, Alert } from '@blueprintjs/core'
 
-import { msg } from 'common/i18n/i18n'
-import { bindMany } from 'common/util/LangUtil'
-
+import BackgroundClient from 'app/BackgroundClient'
+import { EmptyTrashResult } from 'app/CommonTypes'
 import { PhotoActionController } from 'app/controller/PhotoActionController'
+import { showError } from 'app/ErrorPresenter'
+import { msg } from 'app/i18n/i18n'
 import { PhotoCollection } from 'app/state/StateTypes'
 import PhotoActionButtons from 'app/ui/widget/PhotoActionButtons'
 import Toolbar from 'app/ui/widget/Toolbar'
+import { bindMany } from 'app/util/LangUtil'
 
 import './LibraryTopBar.less'
 
 
 interface Props {
     className?: any
+    isActive: boolean
     leftItem?: MaybeElement
     selectedPhotos: PhotoCollection | null
     isShowingTrash: boolean
     isShowingInfo: boolean
     photosCount: number
     photoActionController: PhotoActionController
-    toggleShowInfo: () => void
+    toggleShowInfo(): void
+    onPhotosTrashed(result: EmptyTrashResult): void
 }
 
 interface State {
@@ -47,7 +50,9 @@ export default class LibraryTopBar extends React.Component<Props, State> {
 
     private onEmptyTrashConfirmed() {
         this.setState({ showEmptyTrashAlert: false })
-        ipcRenderer.send('empty-trash', true)
+        BackgroundClient.emptyTrash()
+            .then(this.props.onPhotosTrashed)
+            .catch(error => showError('Trashing photos failed', error))
     }
 
     render() {
@@ -61,7 +66,7 @@ export default class LibraryTopBar extends React.Component<Props, State> {
             >
                 {props.leftItem}
 
-                <Toolbar.Spacer/>
+                <Toolbar.Spacer isTopBar/>
 
                 {props.isShowingTrash &&
                     <Button
@@ -74,6 +79,7 @@ export default class LibraryTopBar extends React.Component<Props, State> {
                     />
                 }
                 <PhotoActionButtons
+                    isActive={props.isActive}
                     selectedPhotos={props.selectedPhotos}
                     isShowingTrash={props.isShowingTrash}
                     isShowingInfo={props.isShowingInfo}

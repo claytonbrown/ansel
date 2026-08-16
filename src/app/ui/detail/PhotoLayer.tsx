@@ -2,13 +2,12 @@ import classNames from 'classnames'
 import React from 'react'
 import { findDOMNode } from 'react-dom'
 
-import { CameraMetrics } from 'common/util/CameraMetrics'
-import { Size } from 'common/util/GeometryTypes'
-import { bindMany } from 'common/util/LangUtil'
-import { profileDetailView } from 'common/LogConstants'
-
+import { profileDetailView } from 'app/LogConstants'
 import PhotoCanvas from 'app/renderer/PhotoCanvas'
 import { Texture } from 'app/renderer/WebGLCanvas'
+import { CameraMetrics } from 'app/util/CameraMetrics'
+import { Size } from 'app/util/GeometryTypes'
+import { bindMany } from 'app/util/LangUtil'
 
 import { DetailMode } from './DetailTypes'
 import TextureCache, { TextureError } from './TextureCache'
@@ -26,9 +25,9 @@ export interface Props {
     /** The size of the detail body (in px) */
     bodySize: Size
     imagePath: string
-    imagePathPrev: string | null
-    imagePathNext: string | null
-    cameraMetrics: CameraMetrics | null
+    imagePathPrev: string | null
+    imagePathNext: string | null
+    cameraMetrics: CameraMetrics | null
     onLoadingStateChange(loadingState: PhotoLayerLoadingState): void
     onTextureChange(textureSize: Size): void
 }

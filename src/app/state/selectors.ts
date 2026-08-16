@@ -1,12 +1,12 @@
-import { PhotoId, Photo, PhotoSectionId, TagId, isLoadedPhotoSection, LoadedPhotoSection } from 'common/CommonTypes'
-import { isShallowEqual } from 'common/util/LangUtil'
+import { PhotoId, Photo, PhotoSectionId, TagId, isLoadedPhotoSection, LoadedPhotoSection } from 'app/CommonTypes'
+import { isShallowEqual } from 'app/util/LangUtil'
 
 import { AppState, DataState, PreselectionRange, SectionSelectionState, SelectionState } from './StateTypes'
 
 
 export function getPhotoByIndex(state: AppState, sectionId: PhotoSectionId, photoIndex: number): Photo | null {
     const section = getLoadedSectionById(state, sectionId)
-    return (section && section.photoData[section.photoIds[photoIndex]]) || null
+    return (section && section.photoData[section.photoIds[photoIndex]]) || null
 }
 
 export function getPhotoById(state: AppState, sectionId: PhotoSectionId, photoId: PhotoId): Photo | null {
@@ -49,12 +49,12 @@ export const getSectionSelections = (() => {
 })()
 
 
-export function isPhotoSelected(sectionId: PhotoSectionId, photoId: PhotoId, selection: SelectionState | null): boolean {
+export function isPhotoSelected(sectionId: PhotoSectionId, photoId: PhotoId, selection: SelectionState | null): boolean {
     return !!selection && isPhotoSelectedInSection(photoId, selection.sectionSelectionById[sectionId])
 }
 
-export function isPhotoSelectedInSection(photoId: PhotoId, sectionSelection: SectionSelectionState | null | undefined): boolean {
-    return !!(sectionSelection && (sectionSelection.selectedPhotosById === 'all' || sectionSelection.selectedPhotosById[photoId]))
+export function isPhotoSelectedInSection(photoId: PhotoId, sectionSelection: SectionSelectionState | null | undefined): boolean {
+    return !!(sectionSelection && (sectionSelection.selectedPhotosById === 'all' || sectionSelection.selectedPhotosById[photoId]))
 }
 
 

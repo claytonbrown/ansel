@@ -1,25 +1,20 @@
 import createLayout from 'justified-layout'
 
-import { profileLibraryLayout, profileThumbnailRenderer } from 'common/LogConstants'
-import { PhotoSectionId, PhotoSectionById, LoadedPhotoSection, isLoadedPhotoSection, Photo, PhotoId, PhotoSet } from 'common/CommonTypes'
-import CancelablePromise, { isCancelError } from 'common/util/CancelablePromise'
-import { getMasterPath } from 'common/util/DataUtil'
-import { assertRendererProcess } from 'common/util/ElectronUtil'
-import Profiler from 'common/util/Profiler'
-import SerialJobQueue from 'common/util/SerialJobQueue'
-
 import BackgroundClient from 'app/BackgroundClient'
+import { PhotoSectionId, PhotoSectionById, LoadedPhotoSection, isLoadedPhotoSection, Photo, PhotoId, PhotoSet } from 'app/CommonTypes'
 import { showError } from 'app/ErrorPresenter'
-import { GridSectionLayout, GridLayout, JustifiedLayoutBox } from 'app/UITypes'
+import { profileLibraryLayout, profileThumbnailRenderer } from 'app/LogConstants'
 import { sectionHeadHeight } from 'app/ui/library/GridSection'
 import { forgetSectionPhotosAction, fetchSectionPhotosAction } from 'app/state/actions'
 import store from 'app/state/store'
+import { GridSectionLayout, GridLayout, JustifiedLayoutBox } from 'app/UITypes'
+import CancelablePromise, { isCancelError } from 'app/util/CancelablePromise'
+import { getMasterPath } from 'app/util/DataUtil'
+import Profiler from 'app/util/Profiler'
+import SerialJobQueue from 'app/util/SerialJobQueue'
 
 import { getThumbnailSrc } from './PhotoController'
 import { collectionContainsSection } from 'app/util/PhotoCollectionResolver'
-
-
-assertRendererProcess()
 
 
 /**
@@ -110,7 +105,7 @@ export function getGridLayoutWithoutStoreUpdate(sectionIds: PhotoSectionId[], se
                 // We have to compare sections, not section IDs in order to detect changes inside the section.
                 // See `createLayoutForLoadedSection`
 
-        let layout: GridSectionLayout | null = null
+        let layout: GridSectionLayout | null = null
         if (prevLayout && !prevLayoutIsDirty) {
             const prevLayoutIsPlaceholder = !prevLayout.boxes
             if (usePlaceholder == prevLayoutIsPlaceholder) {
@@ -287,8 +282,8 @@ export function getGridLayoutWithoutStoreUpdate(sectionIds: PhotoSectionId[], se
         || toSectionIndex !== prevGridLayout.toSectionIndex)
     {
         nextGridLayout = {
-            fromSectionIndex: fromSectionIndex || 0,
-            toSectionIndex: toSectionIndex || 0,
+            fromSectionIndex: fromSectionIndex || 0,
+            toSectionIndex: toSectionIndex || 0,
             sectionLayouts
         }
     } else {
@@ -335,13 +330,13 @@ export function createLayoutForLoadedSection(section: LoadedPhotoSection, viewpo
 
     const aspects = section.photoIds.map(photoId => {
         const photo = photoData[photoId]
-        const { edited_width, edited_height } = photo
+        const { editedWidth, editedHeight } = photo
         // If we have no edited size yet (which happens when loading an old DB were it was missing), the following will happen:
         //   - We calculate a layout using the average aspect (which is how the loading rect of the photo is shown)
         //   - `PhotoRenderer.renderPhoto` will detect that the edited size is missing and will update the DB
         //   - The Grid will trigger a layout, because the photo has changed in the app state
         //   - `getLayoutForSections` will detect that the section changed and so it will get a ney layout using the correct edited size
-        return (edited_width && edited_height) ? (edited_width / edited_height) : averageAspect
+        return (editedWidth && editedHeight) ? (editedWidth / editedHeight) : averageAspect
     })
     const layoutResult = createLayout(aspects, { containerPadding, boxSpacing, containerWidth: viewportWidth, targetRowHeight, targetRowHeightTolerance })
 
@@ -430,7 +425,7 @@ function layoutSectionRow(rowTop: number, rowStartSectionIndex: number, rowEndSe
             if (layout.originalLayout) {
                 // Use the original (unscaled) layout
                 layout = layout.originalLayout
-                sectionLayouts[rowStartSectionIndex] = layout
+                sectionLayouts[sectionIndex] = layout
                 sectionsChanged = true
             }
         } else if (layout.scaleFactor !== scaleFactor) {
@@ -514,7 +509,7 @@ export function createDummyLayoutBoxes(sectionBodyWidth: number, sectionBodyHeig
 function forgetAndFetchSections(sectionIds: PhotoSectionId[], sectionById: PhotoSectionById,
     viewportTop: number, viewportHeight: number, sectionLayouts: GridSectionLayout[])
 {
-    let sectionIdsToForget: { [index: string]: true } | null = null
+    let sectionIdsToForget: { [index: string]: true } | null = null
     let sectionIdsToLoad: PhotoSectionId[] | null = null
 
     const isScrollingDown = (viewportTop >= prevScrollTop)
@@ -588,7 +583,7 @@ export async function fetchSectionPhotos(sectionIds: PhotoSectionId[]): Promise<
 }
 
 
-type CreateThumbnailJob = { isCancelled: boolean, sectionId: PhotoSectionId, photo: Photo, profiler: Profiler | null }
+type CreateThumbnailJob = { isCancelled: boolean, sectionId: PhotoSectionId, photo: Photo, profiler: Profiler | null }
 
 const createThumbnailQueue = new SerialJobQueue(
     (newJob, existingJob) => (newJob.photo.id === existingJob.photo.id) ? newJob : null,
@@ -627,7 +622,7 @@ async function createNextThumbnail(job: CreateThumbnailJob): Promise<void> {
 }
 
 function getThumbnailPriority(job: CreateThumbnailJob): number {
-    const { sectionId, photo } = job
+    const { sectionId, photo } = job
     const sectionIndex = prevSectionIds.indexOf(sectionId)
     const section = prevSectionById[sectionId]
     const layout = prevGridLayout.sectionLayouts[sectionIndex]

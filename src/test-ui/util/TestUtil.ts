@@ -1,4 +1,4 @@
-import { Photo, PhotoId, PhotoById, PhotoSectionId, LoadedPhotoSection } from 'common/CommonTypes'
+import { Photo, PhotoId, PhotoById, PhotoSectionId, LoadedPhotoSection } from 'app/CommonTypes'
 
 import { createTestPhotoId, testBigPhoto } from './MockData'
 
@@ -8,18 +8,17 @@ export function createRandomDummyPhoto(): Photo {
     const minAspect = 3/4
     const maxAspect = 16/9
     const aspect = minAspect + Math.random() * (maxAspect - minAspect)
-    const master_width  = 200 + Math.random() * 2000
-    const master_height = master_width / aspect
+    const masterWidth  = 200 + Math.random() * 2000
+    const masterHeight = masterWidth / aspect
     return {
         ...testBigPhoto,
         id,
-        master_dir: 'some/dir',
-        master_filename: 'dummy',
-        master_width,
-        master_height,
-        master_is_raw: 0,
-        edited_width: master_width,
-        edited_height: master_height,
+        masterDir: 'some/dir',
+        masterFilename: 'dummy',
+        masterWidth,
+        masterHeight,
+        editedWidth: masterWidth,
+        editedHeight: masterHeight,
     }
 }
 

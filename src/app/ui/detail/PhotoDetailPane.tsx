@@ -1,12 +1,8 @@
-import { ipcRenderer } from 'electron'
 import classNames from 'classnames'
 import React from 'react'
 import { connect } from 'react-redux'
 
-import { Photo, PhotoWork, PhotoSectionId } from 'common/CommonTypes'
-import { getNonRawPath } from 'common/util/DataUtil'
-import { bindMany } from 'common/util/LangUtil'
-
+import { Photo, PhotoWork, PhotoSectionId } from 'app/CommonTypes'
 import PhotoInfo from 'app/ui/info/PhotoInfo'
 import { setDetailPhotoByIndex, setPreviousDetailPhoto, setNextDetailPhoto } from 'app/controller/DetailController'
 import { defaultLibrarySelectionController, LibrarySelectionController } from 'app/controller/LibrarySelectionController'
@@ -15,6 +11,8 @@ import { setPhotoTags } from 'app/controller/PhotoTagController'
 import { setShowInfoAction } from 'app/state/actions'
 import { getPhotoById, getPhotoByIndex, getLoadedSectionById, getTagTitles, getInfoPhoto } from 'app/state/selectors'
 import { AppState, InfoPhotoData, SelectionState } from 'app/state/StateTypes'
+import { getMasterPath } from 'app/util/DataUtil'
+import { bindMany } from 'app/util/LangUtil'
 
 import { DetailMode } from './DetailTypes'
 import PhotoDetailBody from './PhotoDetailBody'
@@ -32,10 +30,10 @@ interface StateProps {
     devicePixelRatio: number
     sectionId: PhotoSectionId
     photo: Photo
-    photoPrev: Photo | null
-    photoNext: Photo | null
-    photoWork: PhotoWork | null
-    selection: SelectionState | null
+    photoPrev: Photo | null
+    photoNext: Photo | null
+    photoWork: PhotoWork | null
+    selection: SelectionState | null
     tags: string[]
     isFirst: boolean
     isLast: boolean
@@ -68,13 +66,6 @@ export class PhotoDetailPane extends React.Component<Props, State> {
         bindMany(this, 'toggleShowInfo', 'setMode')
         this.state = {
             mode: 'view',
-        }
-    }
-
-    componentDidUpdate(prevProps: Props, prevState: State) {
-        const { props, state } = this
-        if (props.isActive !== prevProps.isActive || state.mode !== prevState.mode) {
-            ipcRenderer.send('toggleExportMenu', props.isActive && state.mode === 'view')
         }
     }
 
@@ -111,9 +102,9 @@ export class PhotoDetailPane extends React.Component<Props, State> {
                     photo={props.photo}
                     isFirst={props.isFirst}
                     isLast={props.isLast}
-                    imagePath={getNonRawPath(props.photo)}
-                    imagePathPrev={props.photoPrev && getNonRawPath(props.photoPrev)}
-                    imagePathNext={props.photoNext && getNonRawPath(props.photoNext)}
+                    imagePath={getMasterPath(props.photo)}
+                    imagePathPrev={props.photoPrev && getMasterPath(props.photoPrev)}
+                    imagePathNext={props.photoNext && getMasterPath(props.photoNext)}
                     photoWork={props.photoWork}
                     photoActionController={props.photoActionController}
                     librarySelectionController={props.librarySelectionController}
@@ -145,6 +136,11 @@ const Connected = connect<StateProps, DispatchProps, OwnProps, AppState>(
         const currentPhoto = state.detail!.currentPhoto
         const sectionId = currentPhoto.sectionId
         const section = getLoadedSectionById(state, sectionId)
+        // Paging continues into the adjacent section, so it only ends at the very first and very last photo
+        const sectionIds = state.data.sections.ids
+        const sectionIndex = sectionIds.indexOf(sectionId)
+        const isFirstSection = sectionIndex <= 0
+        const isLastSection = sectionIndex === -1 || sectionIndex === sectionIds.length - 1
         return {
             ...props,
             devicePixelRatio: state.navigation.devicePixelRatio,
@@ -155,8 +151,8 @@ const Connected = connect<StateProps, DispatchProps, OwnProps, AppState>(
             photoWork: currentPhoto.photoWork,
             selection: state.library.selection,
             tags: getTagTitles(state),
-            isFirst: currentPhoto.photoIndex === 0,
-            isLast: !section || currentPhoto.photoIndex === section.photoIds.length - 1,
+            isFirst: isFirstSection && currentPhoto.photoIndex === 0,
+            isLast: isLastSection && (!section || currentPhoto.photoIndex === section.photoIds.length - 1),
             showInfo: state.info.showInDetail,
             infoPhoto: getInfoPhoto(state),
             infoPhotoData: state.info.photoData,

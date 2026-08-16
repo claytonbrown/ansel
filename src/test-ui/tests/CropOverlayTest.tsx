@@ -2,9 +2,9 @@ import React from 'react'
 import classnames from 'classnames'
 import { ResizeSensor, IResizeEntry } from '@blueprintjs/core'
 
-import { bindMany } from 'common/util/LangUtil'
-import { Point, Rect, Corner, Side } from 'common/util/GeometryTypes'
-import { cornerPointOfRect, rectFromPoints } from 'common/util/GeometryUtil'
+import { bindMany } from 'app/util/LangUtil'
+import { Point, Rect, Corner, Side } from 'app/util/GeometryTypes'
+import { cornerPointOfRect, rectFromPoints } from 'app/util/GeometryUtil'
 
 import CropOverlay, { Props as CropOverlayProps } from 'app/ui/detail/CropOverlay'
 
@@ -27,7 +27,7 @@ function createDefaultProps(context: TestContext, width: number, height: number)
     const minRectSize = 45
 
     let rect: Rect
-    if (!state.rect || width !== state.prevWidth || height !== state.prevHeight) {
+    if (!state.rect || width !== state.prevWidth || height !== state.prevHeight) {
         rect = {
             x: cropModeInsets.left,
             y: cropModeInsets.top,
@@ -45,7 +45,7 @@ function createDefaultProps(context: TestContext, width: number, height: number)
         width,
         height,
         rect,
-        tilt: state.tilt || 0,
+        tilt: state.tilt || 0,
         onRectDrag(deltaX: number, deltaY: number, isFinished: boolean) {
             let dragStartRect: Rect = state.dragStartRect
             if (!dragStartRect) {
@@ -80,7 +80,7 @@ function createDefaultProps(context: TestContext, width: number, height: number)
         },
         onCornerDrag(corner: Corner, point: Point, isFinished: boolean) {
             const prevRect: Rect = state.rect
-            const nextRect: Rect = { ...prevRect }
+            const nextRect: Rect = { ...prevRect }
 
             if (corner === 'nw' || corner === 'sw') {
                 const prevRight = prevRect.x + prevRect.width

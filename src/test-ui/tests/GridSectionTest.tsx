@@ -1,9 +1,9 @@
 import React from 'react'
+import { convertFileSrc } from '@tauri-apps/api/core'
 
-import CancelablePromise from 'common/util/CancelablePromise'
-import { LoadedPhotoSection, Photo, PhotoSectionId } from 'common/CommonTypes'
-import { getNonRawPath } from 'common/util/DataUtil'
-import { fileUrlFromPath } from 'common/util/TextUtil'
+import CancelablePromise from 'app/util/CancelablePromise'
+import { LoadedPhotoSection, Photo, PhotoSectionId } from 'app/CommonTypes'
+import { getMasterPath } from 'app/util/DataUtil'
 
 import { defaultGridRowHeight } from 'app/UiConstants'
 import { GridSectionLayout } from 'app/UITypes'
@@ -33,12 +33,12 @@ const defaultProps: Props = {
     activePhotoId: null,
     sectionSelection: undefined,
     librarySelectionController: mockLibrarySelectionController,
-    getThumbnailSrc: (photo: Photo) => fileUrlFromPath(getNonRawPath(photo)),
+    getThumbnailSrc: (photo: Photo) => convertFileSrc(getMasterPath(photo)),
     createThumbnail: (sectionId: PhotoSectionId, photo: Photo) => {
-        if (photo.master_filename === 'dummy') {
+        if (photo.masterFilename === 'dummy') {
             return new CancelablePromise<string>(() => {})
         } else {
-            return new CancelablePromise<string>(Promise.resolve(fileUrlFromPath(getNonRawPath(photo))))
+            return new CancelablePromise<string>(Promise.resolve(convertFileSrc(getMasterPath(photo))))
         }
     },
     showPhotoDetails: action('showPhotoDetails'),
@@ -79,7 +79,7 @@ addSection('GridSection')
         for (let i = 0; i < 20; i++) {
             photos.push(createRandomDummyPhoto())
         }
-        photos[0] = { ...photos[0], id: createTestPhotoId(), master_filename: 'dummy' }
+        photos[0] = { ...photos[0], id: createTestPhotoId(), masterFilename: 'dummy' }
         const section = createSection(defaultSectionId, photos)
         const layout = createLayoutForSection(section, viewportWidth, defaultGridRowHeight)
 

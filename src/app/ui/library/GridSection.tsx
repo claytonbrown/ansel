@@ -3,16 +3,15 @@ import React from 'react'
 import { Button } from '@blueprintjs/core'
 import { FaCheckCircle, FaRegCircle } from 'react-icons/fa'
 
-import { PhotoId, Photo, PhotoSectionId, PhotoSection, isLoadedPhotoSection } from 'common/CommonTypes'
-import CancelablePromise from 'common/util/CancelablePromise'
-import { bindMany } from 'common/util/LangUtil'
-
+import { PhotoId, Photo, PhotoSectionId, PhotoSection, isLoadedPhotoSection } from 'app/CommonTypes'
 import { LibrarySelectionController } from 'app/controller/LibrarySelectionController'
 import { isPhotoSelectedInSection } from 'app/state/selectors'
 import { SectionPreselection, SectionSelectionState } from 'app/state/StateTypes'
 import { selectionButtonSize } from 'app/style/variables'
 import { GridSectionLayout } from 'app/UITypes'
 import RedCheckCircle from 'app/ui/widget/icon/RedCheckCircle'
+import CancelablePromise from 'app/util/CancelablePromise'
+import { bindMany } from 'app/util/LangUtil'
 
 import Picture from './Picture'
 
@@ -28,7 +27,7 @@ export interface Props {
     inSelectionMode: boolean
     section: PhotoSection
     layout: GridSectionLayout
-    activePhotoId: PhotoId | null
+    activePhotoId: PhotoId | null
     sectionSelection?: SectionSelectionState
     sectionPreselection?: SectionPreselection
     librarySelectionController: LibrarySelectionController
@@ -128,7 +127,7 @@ export default class GridSection extends React.Component<Props> {
 }
 
 
-function getPhotoPreselection(photoIndex: number, sectionPreselection?: SectionPreselection): boolean | undefined {
+function getPhotoPreselection(photoIndex: number, sectionPreselection?: SectionPreselection): boolean | undefined {
     if (!sectionPreselection) {
         return undefined
     } else if (sectionPreselection === 'all') {

@@ -1,6 +1,4 @@
-import { PhotoId } from 'common/CommonTypes'
-
-import { FetchState } from 'app/UITypes'
+import { PhotoId } from 'app/CommonTypes'
 import { Action } from 'app/state/ActionType'
 import {
     SET_DETAIL_PHOTO, FETCH_DETAIL_PHOTO_DATA_REQUEST, FETCH_DETAIL_PHOTO_DATA_SUCCESS, FETCH_DETAIL_PHOTO_DATA_FAILURE,
@@ -9,6 +7,7 @@ import {
 } from 'app/state/actionTypes'
 import { getLoadedSectionByIdFromDataState } from 'app/state/selectors'
 import { DetailState, DataState } from 'app/state/StateTypes'
+import { FetchState } from 'app/UITypes'
 
 
 export const detail = (state: DetailState = null, dataState: DataState, action: Action): DetailState => {
@@ -96,7 +95,7 @@ export const detail = (state: DetailState = null, dataState: DataState, action: 
                     if (photoIndex >= photoCount) {
                         photoIndex = photoCount - 1
                     }
-                    photoId = section.photoIds[photoIndex] || null
+                    photoId = section.photoIds[photoIndex] || null
                 }
 
                 if (!photoId) {

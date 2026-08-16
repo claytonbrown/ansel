@@ -1,43 +1,9 @@
 import { mat4 } from 'gl-matrix'
-import heic2any from 'heic2any'
-
-import Profiler from 'common/util/Profiler'
-import config from 'common/config'
-import { fileUrlFromPath } from 'common/util/TextUtil'
+import { convertFileSrc } from '@tauri-apps/api/core'
 
 import BackgroundClient from 'app/BackgroundClient'
-
-
-const exifrOrientationOptions = {
-    translateValues: false,
-    pick: [ 'Orientation' ],
-}
-
-
-const heicExtensionRE = new RegExp(`\\.(${config.acceptedHeicExtensions.join('|')})$`, 'i')
-
-
-// Workaround: Prevent tree-shaking from removing `heic2any`.
-heic2any['__dummy'] = 1
-
-function decodeBuffer(buffer: ArrayBuffer): Promise<ImageData[]> {
-	return new Promise((resolve, reject) => {
-		const id = (Math.random() * new Date().getTime()).toString();
-		const message = { id, buffer };
-		((window as any).__heic2any__worker as Worker).postMessage(message);
-		((window as any).__heic2any__worker as Worker).addEventListener(
-			"message",
-			(message) => {
-				if (message.data.id === id) {
-					if (message.data.error) {
-						return reject(message.data.error);
-					}
-					return resolve(message.data.imageDataArr);
-				}
-			}
-		);
-	});
-}
+import { isHeicFile, isRawFile } from 'app/util/DataUtil'
+import Profiler from 'app/util/Profiler'
 
 
 export function hasWebGLSupport(): boolean {
@@ -101,53 +67,71 @@ export default class WebGLCanvas {
         return new GraphicBuffer(gl, bufferId, gl.FLOAT, componentSize, data.length / componentSize)
     }
 
-    async createTextureFromFile(filePath: string, srcFormat: number = WebGLRenderingContext.RGB, srcType: number = WebGLRenderingContext.UNSIGNED_BYTE, profiler: Profiler | null = null): Promise<Texture> {
+    async createTextureFromFile(filePath: string, srcFormat: number = WebGLRenderingContext.RGB, srcType: number = WebGLRenderingContext.UNSIGNED_BYTE, profiler: Profiler | null = null): Promise<Texture> {
         // For details see: https://developer.mozilla.org/en-US/docs/Web/API/WebGL_API/Tutorial/Using_textures_in_WebGL
 
         const gl = this.gl
 
-        let textureSource: HTMLImageElement | Uint8ClampedArray
+        let textureSource: ImageBitmap | Uint8Array
         let textureFormat: number
         let width: number
         let height: number
-        if (heicExtensionRE.test(filePath)) {
-            if (await loadHeifFileSupported()) {
-                const imageData = await BackgroundClient.loadHeifFile(filePath)
-                if (profiler) profiler.addPoint('Loaded heic image')
-                textureSource = new Uint8ClampedArray(imageData.data)
-                textureFormat = gl.RGB
-                width = imageData.width
-                height = imageData.height
-                if (profiler) profiler.addPoint('Prepared image data')
-            } else {
-                const encodedHeicBuffer = await (await fetch(fileUrlFromPath(filePath))).arrayBuffer()
-                if (profiler) profiler.addPoint('Fetch encoded heic data')
-                const imageData = await decodeBuffer(encodedHeicBuffer)
-                if (profiler) profiler.addPoint('Decoded heic data')
-    
-                textureSource = imageData[0].data
-                textureFormat = gl.RGBA
-                width = imageData[0].width
-                height = imageData[0].height
-            }
+        if (isHeicFile(filePath)) {
+            // HEIC is decoded natively in Rust (libheif) and returned as interleaved RGB8.
+            const imageData = await BackgroundClient.loadHeifFile(filePath)
+            if (profiler) profiler.addPoint('Loaded heic image')
+            textureSource = imageData.data
+            textureFormat = gl.RGB
+            width = imageData.width
+            height = imageData.height
+            if (profiler) profiler.addPoint('Prepared image data')
         } else {
             const image = new Image()
-            await new Promise((resolve, reject) => {
-                image.onload = resolve
-                image.onerror = errorEvt => {
-                    reject(new Error(`Loading image failed: ${filePath}`))
-                }
-                image.src = fileUrlFromPath(filePath)
-            })
-            textureSource = image
-            textureFormat = -1  // Not needed for images
+
+            // The asset-protocol URL (convertFileSrc) is a different origin than the WebView, so without
+            // CORS the image taints the WebGL texture and texImage2D throws a SecurityError. The Tauri asset
+            // protocol sends the matching CORS headers, so an anonymous request loads it untainted.
+            image.crossOrigin = 'anonymous'
+
+            // RAW images can't be shown directly. Rust backend extracts the largest embedded JPEG preview and we
+            // decode it with the browser like any other JPEG (via a blob URL). For all other formats the
+            // image file is loaded straight from disk.
+            const isRaw = isRawFile(filePath)
+            const src = isRaw
+                ? URL.createObjectURL(new Blob([await BackgroundClient.extractRawPreviewJpg(filePath)], { type: 'image/jpeg' }))
+                : convertFileSrc(filePath)
+            try {
+                await new Promise((resolve, reject) => {
+                    image.onload = resolve
+                    image.onerror = errorEvt => {
+                        reject(new Error(`Loading image failed: ${filePath}`))
+                    }
+                    image.src = src
+                })
+            } finally {
+                if (isRaw) URL.revokeObjectURL(src)
+            }
             if (profiler) profiler.addPoint('Loaded image')
 
-            // `image.width` and `image.height` already has EXIF orientation applied
-            width = image.width
-            height = image.height
+            // Never hand the `<img>` itself to texImage2D: WebKit pulls the pixels out of the CGImage in
+            // `GraphicsContextGLImageExtractor::extractImage`, and for a layout it doesn't handle it crashes the whole
+            // web content process instead of throwing an Error.
+            //
+            // Example photo which causes a crash: submodules/test-data/photos/tif/tiff_CMYK_uncompressed.tiff
+            // (I don't exactly know why this image crashes - it's not because of CMYK, since a CMYK JPEG works)
+            //
+            // Workaround: Using an ImageBitmap leaves that conversion to WebKit itself and measured no slower than the
+            // direct upload.
+            const bitmap = await createImageBitmap(image, { imageOrientation: 'from-image' })
+            textureSource = bitmap
+            textureFormat = -1  // Not needed for bitmaps
 
-            if (profiler) profiler.addPoint('Loaded Exif orientation')
+            // Using `from-image` in the `createImageBitmap` call above keeps the EXIF rotation the `<img>` applies.
+            // Without it the bitmap would carry the unrotated pixels. So we don't apply EXIF rotation here.
+            width = bitmap.width
+            height = bitmap.height
+
+            if (profiler) profiler.addPoint('Created image bitmap')
         }
 
         const textureId = this.gl.createTexture()
@@ -161,9 +145,17 @@ export default class WebGLCanvas {
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_S, gl.CLAMP_TO_EDGE)
         gl.texParameteri(gl.TEXTURE_2D, gl.TEXTURE_WRAP_T, gl.CLAMP_TO_EDGE)
 
-        if (textureSource instanceof HTMLImageElement) {
+        if (textureSource instanceof ImageBitmap) {
             gl.texImage2D(gl.TEXTURE_2D, 0, this.internalFormat, srcFormat, srcType, textureSource)
+            // The pixels are in the texture now, so release the bitmap's copy right away instead of
+            // waiting for the garbage collector - it holds a full RGBA frame.
+            textureSource.close()
         } else {
+            // The RGB8 buffer from Rust is packed tightly (row stride = width*3), but WebGL defaults
+            // UNPACK_ALIGNMENT to 4, expecting each row to start on a 4-byte boundary. When width*3 is not a
+            // multiple of 4 (e.g. a cropped HEIC with an odd width), that mismatch shifts every row and the
+            // texture decodes to garbage/black. Setting alignment to 1 tells WebGL the rows are byte-packed.
+            gl.pixelStorei(gl.UNPACK_ALIGNMENT, 1)
             gl.texImage2D(gl.TEXTURE_2D, 0, textureFormat, width, height, 0, textureFormat, gl.UNSIGNED_BYTE, textureSource)
         }
 
@@ -175,17 +167,6 @@ export default class WebGLCanvas {
     }
 
 }
-
-
-const loadHeifFileSupported = (() => {
-    let isSupported: boolean | null = null
-    return async () => {
-        if (isSupported === null) {
-            isSupported = await BackgroundClient.loadHeifFileSupported()
-        }
-        return isSupported
-    }
-})()
 
 
 /**

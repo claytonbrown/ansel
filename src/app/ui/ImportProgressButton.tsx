@@ -2,10 +2,10 @@ import React from 'react'
 import classnames from 'classnames'
 import { Popover, Position, Button, Spinner, Icon } from '@blueprintjs/core'
 
-import { msg } from 'common/i18n/i18n'
-import { bindMany } from 'common/util/LangUtil'
-import { formatNumber } from 'common/util/TextUtil'
-import { ImportProgress } from 'common/CommonTypes'
+import { ImportProgress } from 'app/CommonTypes'
+import { msg } from 'app/i18n/i18n'
+import { bindMany } from 'app/util/LangUtil'
+import { formatNumber } from 'app/util/TextUtil'
 
 import './ImportProgressButton.less'
 
@@ -30,7 +30,7 @@ export default class ImportProgressButton extends React.Component<Props, State> 
         bindMany(this, 'onOpening', 'onClosed', 'onCancelImport')
     }
 
-    private onOpening() {
+    private onOpening() {
         this.setState({ isShowingPopover: true })
     }
 
@@ -47,7 +47,7 @@ export default class ImportProgressButton extends React.Component<Props, State> 
         const { props, state } = this
         const { progress } = props
 
-        const spinnerProgress = progress.phase === 'import-photos' ? progress.processed / Math.max(1, progress.total) : undefined
+        const spinnerProgress = progress.phase === 'importPhotos' ? progress.processed / Math.max(1, progress.total) : undefined
         const hasError = progress.phase === 'error'
 
         const popoverContent = (

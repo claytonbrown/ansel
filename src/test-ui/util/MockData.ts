@@ -1,4 +1,4 @@
-import { PhotoId, Photo, PhotoDetail, MetaData, ExifData } from 'common/CommonTypes'
+import { PhotoId, Photo, PhotoDetail, MetaData, ExifData } from 'app/CommonTypes'
 
 import { LibrarySelectionController } from 'app/controller/LibrarySelectionController'
 import { PhotoActionController } from 'app/controller/PhotoActionController'
@@ -6,8 +6,11 @@ import { PhotoActionController } from 'app/controller/PhotoActionController'
 import { action } from 'test-ui/core/UiTester'
 
 
-// Relative to folder `dist`
-export const testPhotosDir = '../submodules/test-data/photos'
+// Absolute path to the test-data photos, injected by Vite (see `define` in vite.config.ts).
+// An absolute path is required so the UI Tester can build `asset://` URLs the Tauri asset
+// protocol accepts (it resolves against no base and rejects paths outside its allowed scope).
+declare const __PICTURAMA_TEST_PHOTOS_DIR__: string
+export const testPhotosDir = __PICTURAMA_TEST_PHOTOS_DIR__
 const testPhotos800Dir = `${testPhotosDir}/800`
 
 
@@ -20,17 +23,16 @@ export function createTestPhotoId(): PhotoId {
 function createMockPhoto(options: { dir: string, filename: string, width: number, height: number, special?: Partial<Photo> }): Photo {
     return {
         id: createTestPhotoId(),
-        master_dir: options.dir,
-        master_filename: options.filename,
-        master_width: options.width,
-        master_height: options.height,
-        master_is_raw: 0,
-        edited_width: options.width,
-        edited_height:  options.height,
-        date_section: '2018-05-15',
-        created_at: 1474222345000,
-        updated_at: 1474222345000,
-        imported_at: 1565807324226,
+        masterDir: options.dir,
+        masterFilename: options.filename,
+        masterWidth: options.width,
+        masterHeight: options.height,
+        editedWidth: options.width,
+        editedHeight:  options.height,
+        dateSection: '2018-05-15',
+        createdAt: 1474222345000,
+        updatedAt: 1474222345000,
+        importedAt: 1565807324226,
         flag: 0,
         trashed: 0,
         ...options.special

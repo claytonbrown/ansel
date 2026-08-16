@@ -1,14 +1,13 @@
 import classnames from 'classnames'
 import React from 'react'
 import { Button, ButtonGroup, MaybeElement, Slider } from '@blueprintjs/core'
+import { FaArrowLeft, FaArrowRight, FaChevronLeft, FaCrop } from 'react-icons/fa'
 
-import { msg } from 'common/i18n/i18n'
-import { CameraMetrics, RequestedPhotoPosition, limitPhotoPosition } from 'common/util/CameraMetrics'
-import { bindMany } from 'common/util/LangUtil'
-
-import FaIcon from 'app/ui/widget/icon/FaIcon'
-import Toolbar from 'app/ui/widget/Toolbar'
 import { Command, getCommandButtonProps, CommandGroupId, addCommandGroup, setCommandGroupEnabled, removeCommandGroup } from 'app/controller/HotkeyController'
+import { msg } from 'app/i18n/i18n'
+import Toolbar from 'app/ui/widget/Toolbar'
+import { CameraMetrics, RequestedPhotoPosition, limitPhotoPosition } from 'app/util/CameraMetrics'
+import { bindMany } from 'app/util/LangUtil'
 
 import ViewModeOverlay from './ViewModeOverlay'
 
@@ -16,28 +15,25 @@ import ViewModeOverlay from './ViewModeOverlay'
 export interface Props {
     topBarClassName: string
     bodyClassName: string
-    inSelectionMode: boolean
     isTopBarRight: boolean
     topBarRightItem?: MaybeElement
-    showEditButton: boolean
     isActive: boolean
     isFirst: boolean
     isLast: boolean
-    cameraMetrics: CameraMetrics | null
+    cameraMetrics: CameraMetrics | null
     setPreviousDetailPhoto: () => void
     setNextDetailPhoto: () => void
     setPhotoPosition(photoPosition: RequestedPhotoPosition): void
-    togglePhotoSelected(): void
     enterCropMode(): void
     closeDetail(): void
 }
 
-type CommandKeys = 'close' | 'prevPhoto' | 'nextPhoto' | 'toggleSelected' | 'edit'
+type CommandKeys = 'close' | 'prevPhoto' | 'nextPhoto' | 'edit'
 
 export default class ViewModeLayer extends React.Component<Props> {
 
     private commands: { [K in CommandKeys]: Command }
-    private commandGroupId: CommandGroupId
+    private commandGroupId: CommandGroupId = -1
 
     constructor(props: Props) {
         super(props)
@@ -47,8 +43,7 @@ export default class ViewModeLayer extends React.Component<Props> {
             close: { combo: 'esc', label: msg('common_backToLibrary'), onAction: props.closeDetail },
             prevPhoto: { combo: 'left', enabled: () => !this.props.isFirst, label: msg('PhotoDetailPane_prevPhoto'), onAction: props.setPreviousDetailPhoto },
             nextPhoto: { combo: 'right', enabled: () => !this.props.isLast, label: msg('PhotoDetailPane_nextPhoto'), onAction: props.setNextDetailPhoto },
-            toggleSelected: { combo: 'space', enabled: () => !!this.props.inSelectionMode, onAction: props.togglePhotoSelected },
-            edit: { combo: 'enter', enabled: () => this.props.showEditButton, label: msg('PhotoDetailPane_edit'), onAction: props.enterCropMode },
+            edit: { combo: 'enter', label: msg('PhotoDetailPane_edit'), onAction: props.enterCropMode },
         }
     }
 
@@ -67,7 +62,7 @@ export default class ViewModeLayer extends React.Component<Props> {
         removeCommandGroup(this.commandGroupId)
     }
 
-    private onZoomSliderChange(sliderScale: number) {
+    private onZoomSliderChange(sliderScale: number) {
         const { cameraMetrics } = this.props
         if (!cameraMetrics) {
             return
@@ -103,19 +98,19 @@ export default class ViewModeLayer extends React.Component<Props> {
                     isLeft={true}
                     isRight={props.isTopBarRight}
                 >
-                    <Button onClick={commands.close.onAction}>
-                        <FaIcon name="chevron-left"/>
+                    <Button {...getCommandButtonProps(commands.close)}>
+                        <FaChevronLeft/>
                         <span>{commands.close.label}</span>
                     </Button>
                     <ButtonGroup>
                         <Button minimal={true} {...getCommandButtonProps(commands.prevPhoto)}>
-                            <FaIcon name="arrow-left"/>
+                            <FaArrowLeft/>
                         </Button>
                         <Button minimal={true} {...getCommandButtonProps(commands.nextPhoto)}>
-                            <FaIcon name="arrow-right"/>
+                            <FaArrowRight/>
                         </Button>
                     </ButtonGroup>
-                    <Toolbar.Spacer/>
+                    <Toolbar.Spacer isTopBar/>
                     <div className='PhotoDetailPane-zoomPane'>
                         <Slider className='PhotoDetailPane-zoomSlider'
                             disabled={cameraMetrics === null}
@@ -129,11 +124,9 @@ export default class ViewModeLayer extends React.Component<Props> {
                         />
                         <div className='PhotoDetailPane-zoomValue'>{zoomSliderLabel}</div>
                     </div>
-                    {props.showEditButton &&
-                        <Button minimal={true} {...getCommandButtonProps(commands.edit)}>
-                            <FaIcon name='crop'/>
-                        </Button>
-                    }
+                    <Button minimal={true} {...getCommandButtonProps(commands.edit)}>
+                        <FaCrop/>
+                    </Button>
                     {props.topBarRightItem}
                 </Toolbar>
                 <ViewModeOverlay

@@ -2,10 +2,9 @@ import React from 'react'
 import { findDOMNode } from 'react-dom'
 import classnames from 'classnames'
 
-import { bindMany } from 'common/util/LangUtil'
-
 import DragDropController from 'app/util/DragDropController'
-import { Rect, Point, Corner, corners, Side, sides } from 'common/util/GeometryTypes'
+import { Rect, Point, Corner, corners, Side, sides } from 'app/util/GeometryTypes'
+import { bindMany } from 'app/util/LangUtil'
 
 import TiltControl from './TiltControl'
 
@@ -156,8 +155,8 @@ export default class CropOverlay extends React.Component<Props, State> {
     private renderSide(side: Side) {
         const { rect } = this.props
 
-        const width = (side === 'n' || side === 's') ? rect.width - 2 * halfHandleSize : 2 * halfHandleSize
-        const height = (side === 'w' || side === 'e') ? rect.height - 2 * halfHandleSize : 2 * halfHandleSize
+        const width = (side === 'n' || side === 's') ? rect.width - 2 * halfHandleSize : 2 * halfHandleSize
+        const height = (side === 'w' || side === 'e') ? rect.height - 2 * halfHandleSize : 2 * halfHandleSize
 
         if (width <= 0 || height <= 0) {
             return null
@@ -168,7 +167,7 @@ export default class CropOverlay extends React.Component<Props, State> {
                 key={side}
                 data-side={side}
                 className='CropOverlay-sideHandle'
-                style={{ cursor: (side === 'n' || side === 's') ? 'ns-resize' : 'ew-resize' }}
+                style={{ cursor: (side === 'n' || side === 's') ? 'ns-resize' : 'ew-resize' }}
                 x={rect.x + (side === 'w' ? -halfHandleSize : side === 'e' ? rect.width - halfHandleSize : halfHandleSize)}
                 y={rect.y + (side === 'n' ? -halfHandleSize : side === 's' ? rect.height - halfHandleSize : halfHandleSize)}
                 width={width}

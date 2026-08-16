@@ -4,13 +4,12 @@ import { connect } from 'react-redux'
 import { Button, MaybeElement, NonIdealState } from '@blueprintjs/core'
 import classNames from 'classnames'
 
-import { msg } from 'common/i18n/i18n'
-import { ImportProgress } from 'common/CommonTypes'
-
 import BackgroundClient from 'app/BackgroundClient'
+import { ImportProgress } from 'app/CommonTypes'
 import { createGlobalCommands } from 'app/controller/GlobalCommandController'
 import { addCommandGroup, Command, CommandGroupId, removeCommandGroup } from 'app/controller/HotkeyController'
 import { defaultLibrarySelectionController } from 'app/controller/LibrarySelectionController'
+import { msg } from 'app/i18n/i18n'
 import PhotoDetailPane from 'app/ui/detail/PhotoDetailPane'
 import ExportDialog from 'app/ui/export/ExportDialog'
 import Library from 'app/ui/library/Library'
@@ -18,6 +17,7 @@ import LibraryFilterButton from 'app/ui/library/LibraryFilterButton'
 import SelectionSummary from 'app/ui/library/SelectionSummary'
 import ImportProgressButton from 'app/ui/ImportProgressButton'
 import SettingsPane from 'app/ui/SettingsPane'
+import ErrorBoundary from 'app/ui/widget/ErrorBoundary'
 import { openSettingsAction } from 'app/state/actions'
 import { AppState, MainViewState } from 'app/state/StateTypes'
 
@@ -36,10 +36,10 @@ interface StateProps {
     hasWebGLSupport: boolean
     hasNativeTrafficLightButtons: boolean
     showWindowsButtons: boolean
-    globalCommands: Command[] | null
+    globalCommands: Command[] | null
     selectedCount: number
     mainView: MainViewState
-    importProgress: ImportProgress | null
+    importProgress: ImportProgress | null
     showExport: boolean
 }
 
@@ -56,18 +56,15 @@ interface Props extends OwnProps, StateProps, DispatchProps {
 
 class App extends React.Component<Props> {
 
-    private commandGroupId: CommandGroupId | null = null
+    private commandGroupId: CommandGroupId | null = null
 
     componentDidMount() {
         if (this.props.globalCommands) {
             this.commandGroupId = addCommandGroup(this.props.globalCommands)
         }
-
-        const splashElem = document.getElementById('splash')
-        if (splashElem) splashElem.parentNode!.removeChild(splashElem)
     }
 
-    componentWillUnmount() {
+    componentWillUnmount() {
         if (this.commandGroupId) {
             removeCommandGroup(this.commandGroupId)
         }
@@ -76,12 +73,12 @@ class App extends React.Component<Props> {
     render() {
         const { props } = this
 
-        let modalView: ReactNode | null = null
+        let modalView: ReactNode | null = null
         if (props.showExport) {
             modalView = <ExportDialog />
         }
 
-        let mainView: ReactNode | null = null
+        let mainView: ReactNode | null = null
         if (!props.hasWebGLSupport) {
             mainView = (
                 <div className='App-mainView App-globalError'>
@@ -127,28 +124,30 @@ class App extends React.Component<Props> {
         }
 
         return (
-            <div className={classNames('App', { hasNativeTrafficLightButtons: props.hasNativeTrafficLightButtons, hasWindowsButtons: props.showWindowsButtons })}>
-                <Library
-                    className='App-container'
-                    topBarLeftItem={libraryTopBarLeftItem}
-                    bottomBarLeftItem={props.importProgress &&
-                        <ImportProgressButton
-                            progress={props.importProgress}
-                            toggleImportPaused={props.toggleImportPaused}
-                            cancelImport={props.cancelImport}
+            <ErrorBoundary className='bp3-dark'>
+                <div className={classNames('App', { hasNativeTrafficLightButtons: props.hasNativeTrafficLightButtons, hasWindowsButtons: props.showWindowsButtons })}>
+                    <Library
+                        className='App-container'
+                        topBarLeftItem={libraryTopBarLeftItem}
+                        bottomBarLeftItem={props.importProgress &&
+                            <ImportProgressButton
+                                progress={props.importProgress}
+                                toggleImportPaused={props.toggleImportPaused}
+                                cancelImport={props.cancelImport}
+                            />
+                        }
+                        isActive={!mainView && !modalView}
+                    />
+                    {mainView}
+                    {modalView}
+                    {props.showWindowsButtons &&
+                        <WindowControls
+                            className='App-windowControls'
                         />
                     }
-                    isActive={!mainView && !modalView}
-                />
-                {mainView}
-                {modalView}
-                {props.showWindowsButtons &&
-                    <WindowControls
-                        className='App-windowControls'
-                    />
-                }
-            </div>
-        );
+                </div>
+            </ErrorBoundary>
+        )
     }
 }
 

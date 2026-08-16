@@ -1,183 +1,198 @@
-import { ipcRenderer } from 'electron'
+import { invoke } from '@tauri-apps/api/core'
 
-import { UiConfig, Settings, PhotoSet, PhotoExportOptions, IpcErrorInfo, MetaData, ExifData, DecodedHeifImage } from 'common/CommonTypes'
-import { PhotoId, Photo, PhotoDetail, PhotoWork, PhotoFilter, PhotoSection, PhotoSectionId, Tag } from 'common/CommonTypes'
-import { assertRendererProcess } from 'common/util/ElectronUtil'
-import { decodeIpcError } from 'common/util/IpcUtil'
+import {
+    DecodedHeifImage,
+    EmptyTrashResult,
+    ExifData,
+    MetaData,
+    Photo,
+    PhotoDetail,
+    PhotoExportOptions,
+    PhotoFilter,
+    PhotoId,
+    PhotoSection,
+    PhotoSectionId,
+    PhotoSet,
+    PhotoWork,
+    Settings,
+    Tag,
+    Licenses,
+    UiConfig,
+} from 'app/CommonTypes'
 
 
-assertRendererProcess()
+// Command names are converted from camelCase to snake_case because Tauri expects Rust-style command names.
+const toSnakeCase = (s: string): string =>
+    s.replace(/[A-Z]/g, (c) => `_${c.toLowerCase()}`)
 
-
-// We used to use electron.require for this, but it was too buggy.
-// (I passed a value to an IPC stub and the other side got a value from a previous call)
-
-
-interface CallInfo {
-    resolve(result: any)
-    reject(error: any)
+async function invokeCommand<T>(action: string, payload?: unknown): Promise<T> {
+    let result: T
+    try {
+        result = await invoke(toSnakeCase(action), payload ?? {})
+    } catch (error) {
+        throw new Error(`Invoking ${action} on background failed: ${error}`)
+    }
+    return result
 }
 
-
-let isInitialized = false
-let nextCallId = 1
-const pendingCalls: { [key:number]: CallInfo } = {}
-
-
-export default {
-
-    init() {
-        if (isInitialized) {
-            throw new Error('BackgroundClient is already initialized')
-        }
-        isInitialized = true
-        ipcRenderer.on('onBackgroundActionDone', (event, callId: number, error: IpcErrorInfo | null, result: any | null) => {
-            const callInfo = pendingCalls[callId]
-            delete pendingCalls[callId]
-            if (callInfo) {
-                if (error) {
-                    callInfo.reject(decodeIpcError(error))
-                } else {
-                    callInfo.resolve(result)
-                }
-            }
-        })
-    },
-
-    waitForBackgroundReady(): Promise<void> {
-        return callOnBackground('waitForBackgroundReady')
+const BackgroundClient = {
+    onBeforeRenderUi(payload: { locale: string, localeTexts: Record<string, string> }): Promise<void> {
+        return invokeCommand('onBeforeRenderUi', payload)
     },
 
     toggleFullScreen(): Promise<void> {
-        return callOnBackground('toggleFullScreen')
+        return invokeCommand('toggleFullScreen')
+    },
+
+    toggleDevTools(): Promise<void> {
+        return invokeCommand('toggleDevTools')
     },
 
     toggleUiTester(): Promise<void> {
-        return callOnBackground('toggleUiTester')
+        return invokeCommand('toggleUiTester')
+    },
+
+    setExportMenuEnabled(enabled: boolean): Promise<void> {
+        return invokeCommand('setExportMenuEnabled', { enabled })
     },
 
     reloadUi(): Promise<void> {
-        return callOnBackground('reloadUi')
+        return invokeCommand('reloadUi')
     },
 
     fetchUiConfig(): Promise<UiConfig> {
-        return callOnBackground('fetchUiConfig')
+        return invokeCommand('fetchUiConfig')
     },
 
     fetchSettings(): Promise<Settings> {
-        return callOnBackground('fetchSettings')
+        return invokeCommand('fetchSettings')
     },
 
-    storeSettings(settings: Settings) {
-        return callOnBackground('storeSettings', { settings })
+    storeSettings(settings: Settings): Promise<void> {
+        return invokeCommand('storeSettings', { settings })
+    },
+
+    fetchLicenses(): Promise<Licenses> {
+        return invokeCommand('fetchLicenses')
     },
 
     fileExists(path: string): Promise<boolean> {
-        return callOnBackground('fileExists', { path })
+        return invokeCommand('fileExists', { path })
     },
 
     getFileSize(path: string): Promise<number> {
-        return callOnBackground('getFileSize', { path })
+        return invokeCommand('getFileSize', { path })
     },
 
-    showItemInFolder(fullPath: string): Promise<void>  {
-        return callOnBackground('showItemInFolder', { fullPath })
+    showItemInFolder(fullPath: string): Promise<void> {
+        return invokeCommand('showItemInFolder', { fullPath })
     },
 
     readMetadataOfImage(imagePath: string): Promise<MetaData> {
-        return callOnBackground('readMetadataOfImage', { imagePath })
+        return invokeCommand('readMetadataOfImage', { imagePath })
     },
 
-    getExifData(path: string): Promise<ExifData | null> {
-        return callOnBackground('getExifData', { path })
+    async getExifData(path: string): Promise<ExifData | null> {
+        const data = await invokeCommand<ExifData | null>('getExifData', { path })
+        if (data) {
+            // Rust `Vec<u8>` arrives as a plain JSON number array; the info panel branches on
+            // `instanceof Uint8Array` for these raw byte blobs, so restore the typed-array shape.
+            if (data.makerNote) {
+                data.makerNote = new Uint8Array(data.makerNote as unknown as number[])
+            }
+            if (data.userComment) {
+                data.userComment = new Uint8Array(data.userComment as unknown as number[])
+            }
+        }
+        return data
     },
 
-    loadHeifFileSupported(): Promise<boolean> {
-        return callOnBackground('loadHeifFileSupported')
+    async loadHeifFile(path: string): Promise<DecodedHeifImage> {
+        // The command returns raw bytes (an 8-byte little-endian header with width/height, then the
+        // interleaved RGB8 pixels) as an ArrayBuffer, avoiding a > 100 MB JSON number array.
+        const buf = await invokeCommand<ArrayBuffer>('loadHeifFile', { path })
+        const header = new DataView(buf)
+        const width = header.getUint32(0, true)
+        const height = header.getUint32(4, true)
+        const data = new Uint8Array(buf, 8) // view over the pixel bytes, no copy
+        return { width, height, data }
     },
 
-    loadHeifFile(path: string): Promise<DecodedHeifImage> {
-        return callOnBackground('loadHeifFile', { path })
+    extractRawPreviewJpg(path: string): Promise<ArrayBuffer> {
+        return invokeCommand<ArrayBuffer>('extractRawPreviewJpg', { path })
     },
 
-    selectScanDirectories(): Promise<string[] | undefined> {
-        return callOnBackground('selectScanDirectories')
+    selectScanDirectories(): Promise<string[] | undefined> {
+        return invokeCommand('selectScanDirectories')
     },
 
-    selectExportDirectory(): Promise<string | undefined> {
-        return callOnBackground('selectExportDirectory')
+    selectExportDirectory(): Promise<string | undefined> {
+        return invokeCommand('selectExportDirectory')
     },
 
     startImport(): Promise<void> {
-        return callOnBackground('startImport')
+        return invokeCommand('startImport')
     },
 
     toggleImportPaused(): Promise<void> {
-        return callOnBackground('toggleImportPaused')
+        return invokeCommand('toggleImportPaused')
     },
 
     cancelImport(): Promise<void> {
-        return callOnBackground('cancelImport')
+        return invokeCommand('cancelImport')
     },
 
     fetchTotalPhotoCount(): Promise<number> {
-        return callOnBackground('fetchTotalPhotoCount')
+        return invokeCommand('fetchTotalPhotoCount')
     },
 
     fetchSections(filter: PhotoFilter, sectionIdsToKeepLoaded?: PhotoSectionId[]): Promise<PhotoSection[]> {
-        return callOnBackground('fetchSections', { filter, sectionIdsToKeepLoaded })
+        return invokeCommand('fetchSections', { filter, sectionIdsToKeepLoaded })
     },
 
     fetchSectionPhotos(sectionIds: PhotoSectionId[], filter: PhotoFilter): Promise<PhotoSet[]> {
-        return callOnBackground('fetchSectionPhotos', { sectionIds, filter })
+        return invokeCommand('fetchSectionPhotos', { sectionIds, filter })
     },
 
     updatePhotos(photoIds: PhotoId[], update: Partial<Photo>): Promise<void> {
-        return callOnBackground('updatePhotos', { photoIds, update })
+        return invokeCommand('updatePhotos', { photoIds, update })
+    },
+
+    emptyTrash(): Promise<EmptyTrashResult> {
+        return invokeCommand('emptyTrash')
     },
 
     fetchPhotoDetail(photoId: PhotoId): Promise<PhotoDetail> {
-        return callOnBackground('fetchPhotoDetail', { photoId })
+        return invokeCommand('fetchPhotoDetail', { photoId })
     },
 
     fetchPhotoWorkOfPhoto(photo: Photo): Promise<PhotoWork> {
-        return callOnBackground('fetchPhotoWorkOfPhoto', { photo })
+        return invokeCommand('fetchPhotoWorkOfPhoto', { photo })
     },
 
-    storePhotoWork(photoDir: string, photoFileName: string, photoWork: PhotoWork): Promise<void> {
-        return callOnBackground('storePhotoWork', { photoDir, photoFileName, photoWork })
+    storePhotoWork(photoDir: string, photoFilename: string, photoWork: PhotoWork): Promise<void> {
+        return invokeCommand('storePhotoWork', { photoDir, photoFilename, photoWork })
     },
 
     createThumbnail(photo: Photo): Promise<void> {
-        return callOnBackground('createThumbnail', { photo })
+        return invokeCommand('createThumbnail', { photo })
     },
 
     deleteThumbnail(photoId: PhotoId): Promise<void> {
-        return callOnBackground('deleteThumbnail', { photoId })
+        return invokeCommand('deleteThumbnail', { photoId })
     },
 
     fetchTags(): Promise<Tag[]> {
-        return callOnBackground('fetchTags')
+        return invokeCommand('fetchTags')
     },
 
     storePhotoTags(photoId: PhotoId, photoTags: string[]): Promise<Tag[] | null> {
-        return callOnBackground('storePhotoTags', { photoId, photoTags })
+        return invokeCommand('storePhotoTags', { photoId, photoTags })
     },
 
     exportPhoto(photo: Photo, photoIndex: number, options: PhotoExportOptions): Promise<void> {
-        return callOnBackground('exportPhoto', { photo, photoIndex, options })
+        return invokeCommand('exportPhoto', { photo, photoIndex, options })
     },
 }
 
-async function callOnBackground(action: string, params: any = null): Promise<any> {
-    if (!isInitialized) {
-        throw new Error('BackgroundClient is not yet initialized')
-    }
-
-    const callId = nextCallId++
-
-    return new Promise<any>((resolve, reject) => {
-        pendingCalls[callId] = { resolve, reject }
-        ipcRenderer.send('executeBackgroundAction', callId, action, params)
-    })
-}
+export default BackgroundClient

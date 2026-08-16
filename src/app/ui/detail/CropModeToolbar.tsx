@@ -3,25 +3,25 @@ import classnames from 'classnames'
 import { Button, Classes, Popover, Position, Menu, MenuItem, MenuDivider } from '@blueprintjs/core'
 import { MdImageAspectRatio } from 'react-icons/md'
 
-import { msg } from 'common/i18n/i18n'
-import { rotate } from 'common/util/EffectsUtil'
-import { bindMany } from 'common/util/LangUtil'
-import { PhotoWork } from 'common/CommonTypes'
-
+import { PhotoWork } from 'app/CommonTypes'
+import { msg } from 'app/i18n/i18n'
 import { red } from 'app/style/variables'
 import RotateButtonGroup from 'app/ui/widget/RotateButtonGroup'
 import { SVG_ICON_CLASS } from 'app/ui/widget/icon/SvgIcon'
 import Toolbar from 'app/ui/widget/Toolbar'
+import { rotate } from 'app/util/EffectsUtil'
+import { bindMany } from 'app/util/LangUtil'
 
 import { aspectRatioTypes, AspectRatioType } from './DetailTypes'
 
 
 export interface Props {
     className?: any
+    isActive: boolean
     aspectRatioType: AspectRatioType
     isAspectRatioLandscape: boolean
-    photoWork: PhotoWork | null
-    setAspectRatio(aspectRatioType: AspectRatioType, isLandscape: boolean | null): void
+    photoWork: PhotoWork | null
+    setAspectRatio(aspectRatioType: AspectRatioType, isLandscape: boolean | null): void
     onPhotoWorkEdited(photoWork: PhotoWork): void
     onDone(): void
 }
@@ -41,7 +41,7 @@ export default class CropModeToolbar extends React.Component<Props> {
     private onRotate(turns: number) {
         const prevPhotoWork = this.props.photoWork
         if (prevPhotoWork) {
-            const photoWork = { ...prevPhotoWork }
+            const photoWork = { ...prevPhotoWork }
             rotate(photoWork, turns, true)
             this.props.onPhotoWorkEdited(photoWork)
         }
@@ -50,7 +50,7 @@ export default class CropModeToolbar extends React.Component<Props> {
     private onReset() {
         const prevPhotoWork = this.props.photoWork
         if (prevPhotoWork) {
-            const photoWork = { ...prevPhotoWork }
+            const photoWork = { ...prevPhotoWork }
             delete photoWork.rotationTurns
             delete photoWork.tilt
             delete photoWork.cropRect
@@ -108,7 +108,7 @@ export default class CropModeToolbar extends React.Component<Props> {
                         }
                     />
                 </Popover>
-                <RotateButtonGroup disabled={!props.photoWork} onRotate={this.onRotate}/>
+                <RotateButtonGroup isActive={props.isActive} disabled={!props.photoWork} onRotate={this.onRotate}/>
                 <Button disabled={!hasGeometryOperations} onClick={this.onReset}>
                     <span className={Classes.BUTTON_TEXT}>{msg('CropModeToolbar_reset')}</span>
                 </Button>

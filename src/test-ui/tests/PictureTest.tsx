@@ -1,13 +1,13 @@
 import React from 'react'
+import { convertFileSrc } from '@tauri-apps/api/core'
 
 import { addSection, action } from 'test-ui/core/UiTester'
 import { mockLibrarySelectionController, testDarkPhoto, testLightPhoto } from 'test-ui/util/MockData'
 
-import { Photo, PhotoSectionId } from 'common/CommonTypes'
-import CancelablePromise from 'common/util/CancelablePromise'
-import { getNonRawPath } from 'common/util/DataUtil'
+import { Photo, PhotoSectionId } from 'app/CommonTypes'
+import CancelablePromise from 'app/util/CancelablePromise'
+import { getMasterPath } from 'app/util/DataUtil'
 import ParameterTestDecorator from 'test-ui/util/ParameterTestDecorator'
-import { fileUrlFromPath } from 'common/util/TextUtil'
 
 import { boxSpacing } from 'app/controller/LibraryController'
 import { gridBg } from 'app/style/variables'
@@ -19,17 +19,17 @@ const testWrapperPadding = 40
 
 type BaseTestProps = Omit<Props, 'librarySelectionController'>
 
-const defaultPropsCommon: Omit<Props, 'photo' | 'layoutBox' | 'librarySelectionController'> = {
+const defaultPropsCommon: Omit<Props, 'photo' | 'layoutBox' | 'librarySelectionController'> = {
     inSelectionMode: false,
     sectionId: 'test-section',
     isActive: false,
     isSelected: false,
-    getThumbnailSrc: (photo: Photo) => fileUrlFromPath(getNonRawPath(photo)),
+    getThumbnailSrc: (photo: Photo) => convertFileSrc(getMasterPath(photo)),
     createThumbnail: (sectionId: PhotoSectionId, photo: Photo) => {
-        if (photo.master_filename === 'dummy') {
+        if (photo.masterFilename === 'dummy') {
             return new CancelablePromise<string>(() => {})
         } else {
-            return new CancelablePromise<string>(Promise.resolve(fileUrlFromPath(getNonRawPath(photo))))
+            return new CancelablePromise<string>(Promise.resolve(convertFileSrc(getMasterPath(photo))))
         }
     },
     showPhotoDetails: action('showPhotoDetails'),
@@ -39,10 +39,10 @@ const defaultPropsLight: BaseTestProps = {
     ...defaultPropsCommon,
     photo: testLightPhoto,
     layoutBox: {
-        aspectRatio: testLightPhoto.master_width / testLightPhoto.master_height,
+        aspectRatio: testLightPhoto.masterWidth / testLightPhoto.masterHeight,
         left: testWrapperPadding,
         top: testWrapperPadding,
-        width: Math.round(defaultGridRowHeight * testLightPhoto.master_width / testLightPhoto.master_height),
+        width: Math.round(defaultGridRowHeight * testLightPhoto.masterWidth / testLightPhoto.masterHeight),
         height: defaultGridRowHeight
     },
 }
@@ -51,10 +51,10 @@ const defaultPropsDark: BaseTestProps = {
     ...defaultPropsCommon,
     photo: testDarkPhoto,
     layoutBox: {
-        aspectRatio: testDarkPhoto.master_width / testDarkPhoto.master_height,
+        aspectRatio: testDarkPhoto.masterWidth / testDarkPhoto.masterHeight,
         left: defaultPropsLight.layoutBox.left + defaultPropsLight.layoutBox.width + boxSpacing,
         top: testWrapperPadding,
-        width: Math.round(defaultGridRowHeight * testDarkPhoto.master_width / testDarkPhoto.master_height),
+        width: Math.round(defaultGridRowHeight * testDarkPhoto.masterWidth / testDarkPhoto.masterHeight),
         height: defaultGridRowHeight
     },
 }

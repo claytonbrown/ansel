@@ -2,7 +2,8 @@
     "compilerOptions": {
         "noEmit": true,
         "typeRoots": [ "./node_modules/@types", "src/typings" ],
-        "target": "es6",
+        "types": ["jest"],
+        "target": "ES2021",
         "module": "commonjs",
         "moduleResolution": "node",
         "resolveJsonModule": true,

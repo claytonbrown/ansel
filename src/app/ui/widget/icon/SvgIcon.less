@@ -7,18 +7,22 @@
 }
 
 .bp3-button {
-    .SvgIcon {
+    svg {  // Icons from react-icons, e.g. FaChevronLeft
         &:not(:last-child) {
-            margin-right: 5px;   // E.g. restore from trash button
+            margin-right: 10px;
+            vertical-align: middle;
+            margin-bottom: 1px;
         }
     }
-    .FaIcon {
+    .SvgIcon { // SvgIcons. E.g. restore from trash button
         &:not(:last-child) {
-            margin-right: 10px;   // E.g. detail back button
+            margin-right: 5px;
         }
     }
     .SvgIcon {
         font-size: @svgIconSize;
-        margin: (-(@svgIconSize - @buttonFontSize) / 2 - 1px) -2px;
+        //margin: (-(@svgIconSize - @buttonFontSize) / 2 - 1px) -2px;
+            // Disabled (2026-07-14): Icon in "selected" button of PhotoDetailPane was too high
+            //     I leave it commented out, because maybe it breaks somewhere else
     }
 }
